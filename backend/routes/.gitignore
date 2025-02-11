@@ -1,0 +1,25 @@
+# Node.js modules
+node_modules/
+package-lock.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment Variables (API keys, secrets)
+.env
+credentials.json
+
+# Cache & OS-specific files
+.DS_Store
+Thumbs.db
+
+# Debugging files
+*.swp
+*.swo
+
+# Dependency directories (if using Docker)
+docker-compose.override.yml
