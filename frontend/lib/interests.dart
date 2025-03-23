@@ -83,7 +83,7 @@ class _InterestsPageState extends State<InterestsPage> {
     String? userId = prefs.getString('userId');
     String? token = prefs.getString('token');
 
-    if (userId == null || token == null) {
+    if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("User not found. Please log in.")));
       return;
     }

@@ -34,7 +34,7 @@ class _FeedPageAppState extends State<FeedPageApp> {
     String? userId = prefs.getString('userId');
     String? token = prefs.getString('token');
 
-    if (userId == null || token == null) {
+    if (token == null) {
       setState(() {
         hasError = true;
         isLoading = false;

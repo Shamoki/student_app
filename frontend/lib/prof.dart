@@ -30,9 +30,9 @@ class _ProfPageState extends State<ProfPage> {
       String? storedUsername = prefs.getString('username');
       String? storedEmail = prefs.getString('email');
 
-      if (storedUsername != null && storedEmail != null) {
+      if (storedEmail != null) {
         setState(() {
-          _username = storedUsername;
+          _username = storedUsername!;
           _email = storedEmail;
         });
       } else {
@@ -54,7 +54,7 @@ class _ProfPageState extends State<ProfPage> {
       String? userId = prefs.getString('userId');
       String? token = prefs.getString('token');
 
-      if (userId == null || token == null) {
+      if (token == null) {
         throw Exception("User not logged in.");
       }
 
@@ -91,10 +91,6 @@ class _ProfPageState extends State<ProfPage> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
-      if (token == null) {
-        throw Exception("User not logged in.");
-      }
-
       final response = await http.get(
         Uri.parse('http://localhost:5000/api/profile/photo'),
         headers: {
@@ -122,10 +118,6 @@ class _ProfPageState extends State<ProfPage> {
       if (result != null && result.files.single.bytes != null) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         String? token = prefs.getString('token');
-
-        if (token == null) {
-          throw Exception("User not logged in.");
-        }
 
         final url = Uri.parse('http://localhost:5000/api/profile/upload');
         final request = http.MultipartRequest('POST', url);
@@ -157,10 +149,6 @@ class _ProfPageState extends State<ProfPage> {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-
-      if (token == null) {
-        throw Exception("User not logged in.");
-      }
 
       final response = await http.delete(
         Uri.parse('http://localhost:5000/api/profile/photo'),

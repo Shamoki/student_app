@@ -27,12 +27,10 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
       lastDate: DateTime(2030),
     );
 
-    if (pickedDate != null) {
-      setState(() {
-        _selectedDueDate = pickedDate;
-      });
+    setState(() {
+      _selectedDueDate = pickedDate;
+    });
     }
-  }
 
   // 🚀 Function to send assignment data to backend
   Future<void> _saveAssignment() async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onboarding/feed.dart';
+import 'package:onboarding/flashcard_units.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 import 'prof.dart';
 import 'assignments.dart';
@@ -191,6 +192,11 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(builder: (context) => const AssignmentsPage()),
             );
+          } else if (title == "Notes & Resources") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NewFlashcardPage()),
+            );
           }
         },
         borderRadius: BorderRadius.circular(15),
@@ -206,6 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
 
 class DynamicTopWidget extends StatelessWidget {
   const DynamicTopWidget({super.key});

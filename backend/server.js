@@ -7,8 +7,13 @@ const { init } = require('./socket'); // WebSocket initialization
 const authRoutes = require('./routes/auth'); // Authentication routes
 const uploadRoutes = require('./routes/upload'); // Upload route
 const profileRoutes = require('./routes/profile'); // Profile photo routes
-const mediumRoutes = require("./routes/mediumRoutes"); // ✅ Medium Articles Fetch Route
+const mediumRoutes = require('./routes/mediumRoutes'); // ✅ Medium Articles Fetch Route
 const assignmentRoutes = require('./routes/assignments'); // Import assignments routes
+const flashcardsRoutes= require('./routes/flashcards');
+const unitRoutes = require("./routes/units");
+const topicsRoutes = require('./routes/topics');
+
+
 
 const app = express();
 const server = http.createServer(app); // Create HTTP server for Express and WebSocket
@@ -47,6 +52,10 @@ app.use('/api/upload', uploadRoutes); // Upload route
 app.use('/api/profile', profileRoutes); // Profile pic route
 app.use('/api/medium', mediumRoutes); // ✅ Medium Articles Fetch Route
 app.use('/api/assignments', assignmentRoutes); // ✅ Mount the assignments API
+app.use('/api/flashcards', flashcardsRoutes);
+app.use("/api/units", unitRoutes);
+app.use('/api/topics', topicsRoutes);
+
 
 
 // ✅ Root API Route (Useful for testing server status)
