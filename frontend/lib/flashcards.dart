@@ -3,17 +3,22 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
 import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'custom_flashcard.dart';
 import 'auto_flashcard.dart';
 import 'package:flutter/services.dart';
 
+
 class Flashcards extends StatefulWidget {
   final String unit;
-  const Flashcards({super.key, required this.unit});
+  final String topic;
+
+  const Flashcards({super.key, required this.unit, required this.topic});
 
   @override
   State<Flashcards> createState() => _FlashcardsState();
 }
+
 
 class _FlashcardsState extends State<Flashcards> {
   List<dynamic> flashcards = [];
@@ -23,12 +28,27 @@ class _FlashcardsState extends State<Flashcards> {
   @override
   void initState() {
     super.initState();
-    _fetchFlashcardsByUnit();
+    _fetchFlashcardsByTopic();
   }
 
-  Future<void> _fetchFlashcardsByUnit() async {
-    final response = await http.get(Uri.parse(
-        'http://localhost:5000/api/flashcards?unit=${Uri.encodeComponent(widget.unit)}'));
+  Future<void> _fetchFlashcardsByTopic() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please log in again.")),
+      );
+      return;
+    }
+
+    final response = await http.get(
+  Uri.parse('http://localhost:5000/api/flashcards?unit=${Uri.encodeComponent(widget.unit)}&topic=${Uri.encodeComponent(widget.topic)}'),
+  headers: {
+    'Authorization': 'Bearer $token',
+  },
+);
+
 
     if (response.statusCode == 200) {
       setState(() {
@@ -43,10 +63,25 @@ class _FlashcardsState extends State<Flashcards> {
   }
 
   Future<void> _deleteFlashcard(String id) async {
-    final response = await http.delete(Uri.parse('http://localhost:5000/api/flashcards/$id'));
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please log in again.")),
+      );
+      return;
+    }
+
+    final response = await http.delete(
+      Uri.parse('http://localhost:5000/api/flashcards/$id'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
 
     if (response.statusCode == 200) {
-      _fetchFlashcardsByUnit(); // Refresh
+      _fetchFlashcardsByTopic(); // Refresh
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to delete flashcard")),
@@ -105,10 +140,10 @@ class _FlashcardsState extends State<Flashcards> {
                         Navigator.pop(context);
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const CustomFlashcardPage(unit: '',)),
+                          MaterialPageRoute(builder: (_) => CustomFlashcardPage(unit: widget.unit)),
                         ).then((refresh) {
                           if (refresh == true) {
-                            _fetchFlashcardsByUnit();
+                            _fetchFlashcardsByTopic();
                           }
                         });
                       },
@@ -155,7 +190,7 @@ class _FlashcardsState extends State<Flashcards> {
             Container(
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage('assets/background_soft.jpg'),
+                  image: const AssetImage('assets/background_soft.jpg'),
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(
                     Colors.white.withOpacity(0.9),
@@ -171,13 +206,14 @@ class _FlashcardsState extends State<Flashcards> {
                   children: [
                     const SizedBox(height: 20),
                     Text(
-                      widget.unit,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
-                      ),
-                    ),
+  " ${widget.topic} Flashcards",
+  style: const TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.bold,
+    color: Colors.deepPurple,
+  ),
+),
+
                     const SizedBox(height: 20),
                     TextField(
                       controller: searchController,
@@ -204,11 +240,8 @@ class _FlashcardsState extends State<Flashcards> {
                                   Lottie.asset('assets/animations/motivation.json', height: 180),
                                   const SizedBox(height: 20),
                                   const Text(
-                                    "No flashcards found.",
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.deepPurple),
+                                    "Add flashcard.",
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.deepPurple),
                                   ),
                                 ],
                               ),
@@ -221,7 +254,7 @@ class _FlashcardsState extends State<Flashcards> {
                                   onLongPress: () {
                                     showMenu(
                                       context: context,
-                                      position: RelativeRect.fromLTRB(100, 100, 100, 100),
+                                      position: const RelativeRect.fromLTRB(100, 100, 100, 100),
                                       items: [
                                         PopupMenuItem(
                                           child: const Text("Copy"),
@@ -257,8 +290,8 @@ class _FlashcardsState extends State<Flashcards> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _showFlashcardOptions,
-          child: const Icon(Icons.add),
           backgroundColor: Colors.deepPurple,
+          child: const Icon(Icons.add),
         ),
       ),
     );
@@ -325,9 +358,9 @@ class _FlipFlashcardState extends State<FlipFlashcard> {
             );
           },
           layoutBuilder: (widget, list) => Stack(children: [if (widget != null) widget, ...list]),
-          child: isFlipped ? _buildCardBack() : _buildCardFront(),
           switchInCurve: Curves.easeInOut,
           switchOutCurve: Curves.easeInOut,
+          child: isFlipped ? _buildCardBack() : _buildCardFront(),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'add_assignment.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AssignmentsPage extends StatefulWidget {
   const AssignmentsPage({super.key});
@@ -22,19 +23,43 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
   }
 
   Future<void> _fetchAssignments() async {
-    final response = await http.get(Uri.parse('http://localhost:5000/api/assignments'));
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) return;
+
+    final response = await http.get(
+      Uri.parse('http://localhost:5000/api/assignments'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
 
     if (response.statusCode == 200) {
       setState(() {
         assignments = json.decode(response.body);
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to fetch assignments")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to fetch assignments")),
+      );
     }
   }
 
   Future<void> _toggleCompletion(String id) async {
-    final response = await http.put(Uri.parse('http://localhost:5000/api/assignments/$id'));
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) return;
+
+    final response = await http.put(
+      Uri.parse('http://localhost:5000/api/assignments/$id'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
 
     if (response.statusCode == 200) {
       _fetchAssignments();
@@ -42,7 +67,18 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
   }
 
   Future<void> _deleteAssignment(String id) async {
-    final response = await http.delete(Uri.parse('http://localhost:5000/api/assignments/$id'));
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) return;
+
+    final response = await http.delete(
+      Uri.parse('http://localhost:5000/api/assignments/$id'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
 
     if (response.statusCode == 200) {
       _fetchAssignments();
@@ -52,28 +88,30 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, 
-      
+      backgroundColor: Colors.white,
       body: assignments.isEmpty
-          ? Center(  
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
- 
-  const Text(
-    "Assignments and Deadlines",
-    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.deepPurple),
-  ),
-  const SizedBox(height: 50), 
-   // Space between the text and Lottie animation
-  Lottie.asset('assets/animations/motivation.json', height: 200),
-  const SizedBox(height: 20), // Space between Lottie and "No Assignments!" text
-  const Text(
-    "No assignments!",
-    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
-  ),
-],
-
+                  const Text(
+                    "Assignments and Deadlines",
+                    style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple),
+                  ),
+                  const SizedBox(height: 50),
+                  Lottie.asset('assets/animations/motivation.json', height: 200),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "No assignments!",
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple),
+                  ),
+                ],
               ),
             )
           : ListView.builder(
@@ -84,30 +122,41 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
                 return GestureDetector(
                   onTap: () => _toggleCompletion(assignment["_id"]),
                   child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: ListTile(
                       leading: Icon(
-                        assignment["completed"] ? Icons.check_circle : Icons.assignment,
-                        color: assignment["completed"] ? Colors.green : Colors.deepPurple,
+                        assignment["completed"]
+                            ? Icons.check_circle
+                            : Icons.assignment,
+                        color: assignment["completed"]
+                            ? Colors.green
+                            : Colors.deepPurple,
                       ),
                       title: Text(
                         assignment["title"],
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          decoration: assignment["completed"] ? TextDecoration.lineThrough : null,
+                          decoration: assignment["completed"]
+                              ? TextDecoration.lineThrough
+                              : null,
                         ),
                       ),
                       subtitle: Text(
-                        "Due: ${DateFormat.yMMMd().format(DateTime.parse(assignment["dueDate"]))}", // ✅ Format the date
-                        style: TextStyle(color: assignment["completed"] ? Colors.grey : Colors.deepPurple),
+                        "Due: ${DateFormat.yMMMd().format(DateTime.parse(assignment["dueDate"]))}",
+                        style: TextStyle(
+                            color: assignment["completed"]
+                                ? Colors.grey
+                                : Colors.deepPurple),
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteAssignment(assignment["_id"]),
+                        onPressed: () =>
+                            _deleteAssignment(assignment["_id"]),
                       ),
                     ),
                   ),

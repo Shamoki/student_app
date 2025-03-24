@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_web_auth/flutter_web_auth.dart'; // For Google OAuth
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddAssignmentPage extends StatefulWidget {
   const AddAssignmentPage({super.key});
@@ -15,10 +16,9 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   DateTime? _selectedDueDate;
-  List<Map<String, dynamic>> _classroomAssignments = []; // To store fetched assignments
-  bool _isLoading = false; // To show loading state
+  List<Map<String, dynamic>> _classroomAssignments = [];
+  bool _isLoading = false;
 
-  // 📅 Function to show date picker
   Future<void> _pickDueDate() async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -30,39 +30,55 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
     setState(() {
       _selectedDueDate = pickedDate;
     });
-    }
+  }
 
-  // 🚀 Function to send assignment data to backend
   Future<void> _saveAssignment() async {
-    if (_titleController.text.isEmpty || _descriptionController.text.isEmpty || _selectedDueDate == null) {
+    if (_titleController.text.isEmpty ||
+        _descriptionController.text.isEmpty ||
+        _selectedDueDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill all fields")),
       );
       return;
     }
 
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User not authenticated")),
+      );
+      return;
+    }
+
     final response = await http.post(
       Uri.parse('http://localhost:5000/api/assignments'),
-      headers: {"Content-Type": "application/json"},
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token", // ✅ Token included here
+      },
       body: json.encode({
         "title": _titleController.text,
         "description": _descriptionController.text,
-        "dueDate": _selectedDueDate!.toIso8601String(),  // ✅ Send Date in ISO format
+        "dueDate": _selectedDueDate!.toIso8601String(),
       }),
     );
 
     if (response.statusCode == 201) {
-      Navigator.pop(context, json.decode(response.body)); // ✅ Return new assignment
+      Navigator.pop(context, json.decode(response.body));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to add assignment")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to add assignment")),
+      );
     }
   }
 
-  // 🔑 Function to authenticate with Google Classroom
   Future<void> _authenticateWithGoogle() async {
-    const clientId = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with your Google OAuth client ID
-    const redirectUri = 'com.your.app://callback'; // Replace with your redirect URI
-    const scope = 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me';
+    const clientId = 'YOUR_GOOGLE_CLIENT_ID';
+    const redirectUri = 'com.your.app://callback';
+    const scope =
+        'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me';
 
     final url = Uri.https('accounts.google.com', '/o/oauth2/v2/auth', {
       'response_type': 'code',
@@ -72,17 +88,21 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
     });
 
     try {
-      final result = await FlutterWebAuth.authenticate(url: url.toString(), callbackUrlScheme: 'com.your.app');
+      final result = await FlutterWebAuth.authenticate(
+        url: url.toString(),
+        callbackUrlScheme: 'com.your.app',
+      );
       final code = Uri.parse(result).queryParameters['code'];
       if (code != null) {
         await _fetchGoogleClassroomAssignments(code);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to authenticate: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to authenticate: $e")),
+      );
     }
   }
 
-  // 📚 Function to fetch assignments from Google Classroom
   Future<void> _fetchGoogleClassroomAssignments(String code) async {
     setState(() {
       _isLoading = true;
@@ -101,10 +121,14 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
           _classroomAssignments = List<Map<String, dynamic>>.from(data);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to fetch assignments")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to fetch assignments")),
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -112,7 +136,6 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
     }
   }
 
-  // 🖋 Function to auto-fill form with selected assignment
   void _selectAssignment(Map<String, dynamic> assignment) {
     setState(() {
       _titleController.text = assignment['title'];
@@ -130,35 +153,40 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🎯 Header
             Center(
               child: Column(
                 children: [
                   const SizedBox(height: 20),
                   Text(
                     "Add Assignment",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
                   ),
                   const SizedBox(height: 10),
                 ],
               ),
             ),
-
-            // 🔗 Google Classroom Integration Button
             Center(
               child: ElevatedButton(
                 onPressed: _authenticateWithGoogle,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
-                child: const Text("Fetch from Google Classroom", style: TextStyle(fontSize: 18, color: Colors.white)),
+                child: const Text(
+                  "Fetch from Google Classroom",
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
             ),
             const SizedBox(height: 20),
-
-            // 📜 List of Google Classroom Assignments
             if (_isLoading)
               const Center(child: CircularProgressIndicator())
             else if (_classroomAssignments.isNotEmpty)
@@ -169,14 +197,15 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
                     final assignment = _classroomAssignments[index];
                     return ListTile(
                       title: Text(assignment['title']),
-                      subtitle: Text(DateFormat.yMMMd().format(DateTime.parse(assignment['dueDate']))),
+                      subtitle: Text(
+                        DateFormat.yMMMd()
+                            .format(DateTime.parse(assignment['dueDate'])),
+                      ),
                       onTap: () => _selectAssignment(assignment),
                     );
                   },
                 ),
               ),
-
-            // 📌 Assignment Title Field
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -185,8 +214,6 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
               ),
             ),
             const SizedBox(height: 15),
-
-            // ✍ Assignment Description Field
             TextField(
               controller: _descriptionController,
               maxLines: 3,
@@ -196,8 +223,6 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
               ),
             ),
             const SizedBox(height: 15),
-
-            // 📅 Due Date Picker
             GestureDetector(
               onTap: _pickDueDate,
               child: AbsorbPointer(
@@ -205,7 +230,8 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
                   decoration: const InputDecoration(
                     labelText: "Due Date",
                     border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today, color: Colors.deepPurple),
+                    suffixIcon: Icon(Icons.calendar_today,
+                        color: Colors.deepPurple),
                   ),
                   controller: TextEditingController(
                     text: _selectedDueDate != null
@@ -215,19 +241,21 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // ✅ Save Button
             Center(
               child: ElevatedButton(
                 onPressed: _saveAssignment,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
                 ),
-                child: const Text("Save Assignment", style: TextStyle(fontSize: 18, color: Colors.white)),
+                child: const Text(
+                  "Save Assignment",
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
             ),
           ],

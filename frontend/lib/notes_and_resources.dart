@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:onboarding/topics_page.dart';
 import 'resources.dart';
-import 'flashcards.dart';
+
 
 class NotesPage extends StatelessWidget {
   final String unit;
+  
+  final dynamic topic;
 
-  const NotesPage({super.key, required this.unit});
+  const NotesPage({super.key, required this.unit, required this.topic});
+  
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +85,8 @@ class NotesPage extends StatelessWidget {
                             title: "Flashcards & Quizzes",
                             subtitle: "Revise with smart flashcards",
                             icon: Icons.quiz,
-                            page: Flashcards(unit: unit),
+                            page: TopicsPage(unit: unit),
+
                           ),
                         ],
                       ),

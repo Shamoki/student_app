@@ -6,9 +6,9 @@ const AssignmentSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  description: { // ✅ Added Description Field
+  description: {
     type: String,
-    required: false, // Description is optional
+    required: false,
     trim: true
   },
   dueDate: {
@@ -19,7 +19,12 @@ const AssignmentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  createdAt: { // ✅ Added a timestamp for tracking when the assignment was created
+  user: { // ✅ Added to link assignment to a specific user
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  createdAt: {
     type: Date,
     default: Date.now
   }
