@@ -3,31 +3,34 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'notes_and_resources.dart';
+import 'flashcards.dart';
 
-class NewFlashcardPage extends StatefulWidget {
-  const NewFlashcardPage({super.key});
+class TopicsPage extends StatefulWidget {
+  final String unit;
+  const TopicsPage({super.key, required this.unit});
 
   @override
-  State<NewFlashcardPage> createState() => _NewFlashcardPageState();
+  State<TopicsPage> createState() => _TopicsPageState();
 }
 
-class _NewFlashcardPageState extends State<NewFlashcardPage> {
-  List<String> units = [];
-  final TextEditingController _newUnitController = TextEditingController();
+class _TopicsPageState extends State<TopicsPage> {
+  List<String> topics = [];
+  final TextEditingController _newTopicController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _fetchUnits();
+    _fetchTopics();
   }
 
-  Future<void> _fetchUnits() async {
+  Future<void> _fetchTopics() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
+    if (token == null) return;
+
     final response = await http.get(
-      Uri.parse('http://localhost:5000/api/units'),
+      Uri.parse('http://localhost:5000/api/topics/${Uri.encodeComponent(widget.unit)}'),
       headers: {
         'Authorization': 'Bearer $token',
       },
@@ -35,24 +38,24 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
 
     if (response.statusCode == 200) {
       setState(() {
-        units = List<String>.from(json.decode(response.body));
+        topics = List<String>.from(json.decode(response.body));
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to fetch units")),
+        const SnackBar(content: Text("Failed to fetch topics")),
       );
     }
   }
 
-  void _showAddUnitDialog() {
+  void _showAddTopicDialog() {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Add New Unit"),
+          title: const Text("Add New Topic"),
           content: TextField(
-            controller: _newUnitController,
-            decoration: const InputDecoration(hintText: "Enter unit name"),
+            controller: _newTopicController,
+            decoration: const InputDecoration(hintText: "Enter topic name"),
           ),
           actions: [
             TextButton(
@@ -61,29 +64,31 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
             ),
             TextButton(
               onPressed: () async {
-                if (_newUnitController.text.trim().isEmpty) return;
-                final newUnit = _newUnitController.text.trim();
+                final newTopic = _newTopicController.text.trim();
+                if (newTopic.isEmpty) return;
+
                 final prefs = await SharedPreferences.getInstance();
                 final token = prefs.getString('token');
 
                 final response = await http.post(
-                  Uri.parse("http://localhost:5000/api/units"),
+                  Uri.parse('http://localhost:5000/api/topics'),
                   headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer $token',
                   },
-                  body: jsonEncode({"name": newUnit}),
+                  body: jsonEncode({
+                    "name": newTopic,
+                    "unit": widget.unit,
+                  }),
                 );
 
                 if (response.statusCode == 201) {
-                  setState(() {
-                    units.add(newUnit);
-                  });
                   Navigator.pop(context);
-                  _newUnitController.clear();
+                  _newTopicController.clear();
+                  _fetchTopics(); // refresh
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Failed to add unit")),
+                    const SnackBar(content: Text("Failed to add topic")),
                   );
                 }
               },
@@ -100,7 +105,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // 🖼️ Background
+          // Background
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
@@ -119,13 +124,17 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  const Text(
-                    "Your Classes",
-                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                  Text(
+                    widget.unit,
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Expanded(
-                    child: units.isEmpty
+                    child: topics.isEmpty
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -133,22 +142,26 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                 Lottie.asset('assets/animations/motivation.json', height: 200),
                                 const SizedBox(height: 20),
                                 const Text(
-                                  "No Classes yet",
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                                  "No topics yet",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.deepPurple,
+                                  ),
                                 ),
                               ],
                             ),
                           )
                         : ListView.builder(
-                            itemCount: units.length,
+                            itemCount: topics.length,
                             itemBuilder: (context, index) {
-                              final unit = units[index];
+                              final topic = topics[index];
                               return GestureDetector(
                                 onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => NotesPage(unit: unit, topic: null,), // ✅ Pass the selected unit
+                                      builder: (_) => Flashcards(unit: widget.unit, topic: topic),
                                     ),
                                   );
                                 },
@@ -158,7 +171,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.95),
                                     borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
+                                    boxShadow: const [
                                       BoxShadow(
                                         color: Colors.black12,
                                         blurRadius: 8,
@@ -167,7 +180,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                     ],
                                   ),
                                   child: Text(
-                                    unit,
+                                    topic,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
@@ -186,10 +199,10 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: "add_class",
-        onPressed: _showAddUnitDialog,
+        heroTag: "add_topic",
+        onPressed: _showAddTopicDialog,
         backgroundColor: Colors.deepPurple,
-        tooltip: "Add Class",
+        tooltip: "Add Topic",
         child: const Icon(Icons.add),
       ),
     );

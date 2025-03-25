@@ -1,13 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const Flashcard = require("../models/Flashcard");
+const authenticateToken = require("../middlewares/authenticateToken");
 
-// ✅ Get all flashcards (optionally filter by unit and/or topic, with pagination)
+// 🔒 All routes below this require a valid token
+router.use(authenticateToken);
+
+// ✅ Get all flashcards (filtered by user, unit, topic, pagination)
 router.get("/", async (req, res) => {
   try {
     const { unit, topic, page = 1, limit = 20 } = req.query;
 
-    const filter = {};
+    const filter = { user: req.user.userId }; // Only this user's flashcards
     if (unit) filter.unit = unit;
     if (topic) filter.topic = topic;
 
@@ -21,27 +25,30 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Get all distinct units
+// ✅ Get all distinct units (user-specific)
 router.get("/units", async (req, res) => {
   try {
-    const units = await Flashcard.distinct("unit");
+    const units = await Flashcard.distinct("unit", { user: req.user.userId });
     res.json(units);
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// ✅ Get all topics in a specific unit
+// ✅ Get all topics in a unit (user-specific)
 router.get("/topics/:unit", async (req, res) => {
   try {
-    const topics = await Flashcard.distinct("topic", { unit: req.params.unit });
+    const topics = await Flashcard.distinct("topic", {
+      user: req.user.userId,
+      unit: req.params.unit,
+    });
     res.json(topics);
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// ✅ Add a new flashcard
+// ✅ Add a new flashcard (attach user)
 router.post("/", async (req, res) => {
   const { unit, topic, question, answer } = req.body;
 
@@ -50,7 +57,14 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const newFlashcard = new Flashcard({ unit, topic, question, answer });
+    const newFlashcard = new Flashcard({
+      unit,
+      topic,
+      question,
+      answer,
+      user: req.user.userId, // Attach user ID
+    });
+
     await newFlashcard.save();
     res.status(201).json(newFlashcard);
   } catch (err) {
@@ -58,13 +72,16 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Delete a flashcard by ID
+// ✅ Delete a flashcard by ID (must belong to user)
 router.delete("/:id", async (req, res) => {
   try {
-    const result = await Flashcard.findByIdAndDelete(req.params.id);
+    const result = await Flashcard.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.userId,
+    });
 
     if (!result) {
-      return res.status(404).json({ error: "Flashcard not found" });
+      return res.status(404).json({ error: "Flashcard not found or not yours" });
     }
 
     res.status(200).json({ message: "Flashcard deleted successfully" });

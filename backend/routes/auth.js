@@ -5,10 +5,15 @@ const { generateAndSendOTP, verifyOTP } = require('../services/emailOTPService')
 const cors = require('cors');
 const router = express.Router();
 
-// ✅ Use CORS for all routes
 router.use(cors());
 
-// Temporary storage for unverified users
+// ✅ Allow only Strathmore University email addresses
+function isSchoolEmail(email) {
+  const regex = /^[a-zA-Z0-9._%+-]+@strathmore\.edu$/;
+  return regex.test(email);
+}
+
+// ✅ Temporary storage for unverified users
 let pendingUsers = {};
 
 // ✅ SIGNUP - Generate OTP & Temporarily Save User
@@ -18,6 +23,10 @@ router.post('/signup', async (req, res) => {
   try {
     if (!username || !email || !password) {
       return res.status(400).json({ msg: 'All fields are required.' });
+    }
+
+    if (!isSchoolEmail(email)) {
+      return res.status(400).json({ msg: 'Only @strathmore.edu emails are allowed.' });
     }
 
     const existingUser = await User.findOne({ email });
@@ -33,7 +42,7 @@ router.post('/signup', async (req, res) => {
     pendingUsers[email] = { username, email, password };
     console.log(`User details temporarily saved: ${JSON.stringify(pendingUsers[email])}`);
 
-    res.status(201).json({ msg: 'OTP sent to your email for verification.' });
+    res.status(201).json({ msg: 'OTP sent to your Strathmore email.' });
   } catch (err) {
     console.error('Signup error:', err.message);
     res.status(500).json({ msg: 'Error sending OTP. Please try again later.' });
@@ -58,7 +67,7 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ msg: 'User details not found. Please sign up again.' });
     }
 
-    // ✅ Save user to database with `interestsSet: false`
+    // ✅ Save user to database
     const user = new User({ ...userDetails, isEmailVerified: true, interestsSet: false });
     await user.save();
     console.log(`User successfully registered: ${email}`);
@@ -93,10 +102,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid credentials. Please try again.' });
     }
 
-    // ✅ Determine if user needs to set interests
     const interestsNeeded = !user.interestsSet;
 
-    // Generate JWT token
     const payload = { userId: user.id };
     const token = jwt.sign(payload, process.env.SECRET_KEY || 'defaultsecret', { expiresIn: '1h' });
 
@@ -107,10 +114,10 @@ router.post('/login', async (req, res) => {
       user: {
         username: user.username,
         email: user.email,
-        interestsSet: user.interestsSet, // ✅ Helps frontend decide navigation
-        interests: user.interests || { categories: [], subcategories: [] }, // ✅ Provide interests if set
+        interestsSet: user.interestsSet,
+        interests: user.interests || { categories: [], subcategories: [] },
       },
-      interestsNeeded, // ✅ Helps frontend redirect accordingly
+      interestsNeeded,
     });
   } catch (err) {
     console.error('Login error:', err.message);
@@ -118,7 +125,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ✅ SET USER INTERESTS (After First Login)
+// ✅ SET USER INTERESTS
 router.put('/set-interests', async (req, res) => {
   const { userId, categories, subcategories } = req.body;
 
@@ -141,7 +148,7 @@ router.put('/set-interests', async (req, res) => {
   }
 });
 
-// ✅ GET USER INTERESTS (For Content Personalization)
+// ✅ GET USER INTERESTS
 router.get('/get-interests/:userId', async (req, res) => {
   try {
     const user = await User.findById(req.params.userId).select('interests interestsSet');

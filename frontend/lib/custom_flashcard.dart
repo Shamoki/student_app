@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class CustomFlashcardPage extends StatefulWidget {
@@ -26,51 +27,76 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
   }
 
   Future<void> _fetchTopics() async {
-  final response = await http.get(Uri.parse(
-    'http://localhost:5000/api/topics/${Uri.encodeComponent(widget.unit)}'));
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
 
-  if (response.statusCode == 200) {
-    setState(() {
-      topics = List<String>.from(json.decode(response.body));
-    });
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Failed to fetch topics")),
+    if (token == null) return;
+
+    final response = await http.get(
+      Uri.parse('http://localhost:5000/api/flashcards/topics/${Uri.encodeComponent(widget.unit)}'),
+      headers: {'Authorization': 'Bearer $token'},
     );
-  }
-}
 
+    if (response.statusCode == 200) {
+      final fetchedTopics = List<String>.from(json.decode(response.body));
+      setState(() {
+        topics = fetchedTopics;
+        if (fetchedTopics.isNotEmpty && !fetchedTopics.contains(selectedTopic)) {
+          selectedTopic = fetchedTopics.last; // fallback to last added topic
+        }
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to fetch topics")),
+      );
+    }
+  }
 
   Future<void> _addTopic(String newTopic) async {
-  final response = await http.post(
-    Uri.parse('http://localhost:5000/api/topics'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      "unit": widget.unit,
-      "name": newTopic,
-    }),
-  );
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
 
-  if (response.statusCode == 201) {
-    setState(() {
-      topics.add(newTopic);
-      selectedTopic = newTopic;
-    });
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Failed to add topic")),
+    if (token == null) return;
+
+    final response = await http.post(
+      Uri.parse('http://localhost:5000/api/topics'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "unit": widget.unit,
+        "name": newTopic,
+      }),
     );
-  }
-}
 
+    if (response.statusCode == 201) {
+      _newTopicController.clear();
+      await _fetchTopics();
+      setState(() {
+        selectedTopic = newTopic;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to add topic")),
+      );
+    }
+  }
 
   Future<void> _saveFlashcard() async {
-    if (_questionController.text.isEmpty || _answerController.text.isEmpty || selectedTopic == null) {
+    if (_questionController.text.isEmpty ||
+        _answerController.text.isEmpty ||
+        selectedTopic == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
       );
       return;
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) return;
 
     setState(() {
       _isLoading = true;
@@ -78,7 +104,10 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
 
     final response = await http.post(
       Uri.parse('http://localhost:5000/api/flashcards'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
       body: jsonEncode({
         "unit": widget.unit,
         "topic": selectedTopic,
@@ -122,9 +151,8 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
               onPressed: () {
                 final newTopic = _newTopicController.text.trim();
                 if (newTopic.isNotEmpty) {
+                  Navigator.pop(context); // close dialog first
                   _addTopic(newTopic);
-                  _newTopicController.clear();
-                  Navigator.pop(context);
                 }
               },
               child: const Text("Add"),
@@ -144,7 +172,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/background_soft.jpg'),
+                image: const AssetImage('assets/background_soft.jpg'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
                   Colors.white.withOpacity(0.9),
