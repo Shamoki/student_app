@@ -12,6 +12,7 @@ const assignmentRoutes = require('./routes/assignments'); // Import assignments 
 const flashcardsRoutes= require('./routes/flashcards');
 const unitRoutes = require("./routes/units");
 const topicsRoutes = require('./routes/topics');
+const recommendRoutes = require('./routes/recommendRoutes');
 
 
 
@@ -80,3 +81,6 @@ server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 
 // ✅ Export the MongoDB connection for reuse
 module.exports = mongoose.connection;
+
+
+
