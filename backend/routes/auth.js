@@ -136,6 +136,7 @@ router.put('/set-interests', async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
 
+  
     user.interests = { categories, subcategories };
     user.interestsSet = true;
     await user.save();
