@@ -5,12 +5,22 @@ const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, trim: true },
   email: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true },
-  isEmailVerified: { type: Boolean, default: false }, 
-  interestsSet: { type: Boolean, default: false }, // ✅ Track if interests are selected
+  isEmailVerified: { type: Boolean, default: false },
+
+  interestsSet: { type: Boolean, default: false }, // ✅ Tracks if user selected interests
+
+  // ✅ Updated interests structure
   interests: {
-    categories: { type: [String], default: [] }, // ✅ Stores main interest categories (e.g., "Technology")
-    subcategories: { type: [String], default: [] }, // ✅ Stores specific sub-interests (e.g., "AI & Machine Learning")
+    categories: { type: [String], default: [] }, // e.g. ["cs", "math"]
+    subcategories: {
+      type: Map,
+      of: [String], // e.g. { cs: ["cs.AI", "cs.CL"], math: ["math.CO"] }
+      default: {},
+    },
   },
+
+  firstLogin: { type: Boolean, default: true }, // ✅ Controls if recommendations should be shown
+
   createdAt: { type: Date, default: Date.now },
 });
 

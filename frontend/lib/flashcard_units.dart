@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
+import 'package:onboarding/flashcards.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'notes_and_resources.dart';
+
 
 class NewFlashcardPage extends StatefulWidget {
   const NewFlashcardPage({super.key});
@@ -148,7 +149,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => NotesPage(unit: unit, topic: null,), // ✅ Pass the selected unit
+                                      builder: (_) => Flashcards(unit: '',topic: ''), // ✅ Pass the selected unit
                                     ),
                                   );
                                 },

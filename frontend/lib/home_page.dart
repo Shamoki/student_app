@@ -15,7 +15,7 @@ class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
 }
-
+ 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
@@ -155,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static Widget _buildFeatureGrid(BuildContext context) {
     final List<Map<String, dynamic>> features = [
       {"title": "Assignments & Deadlines", "icon": Icons.assignment, "color": Colors.blue},
-      {"title": "Notes & Resources", "icon": Icons.book, "color": Colors.green},
+      {"title": "Flashcards", "icon": Icons.book, "color": Colors.green},
       {"title": "Study Planner", "icon": Icons.schedule, "color": Colors.orange},
       {"title": "Wellness & Motivation", "icon": Icons.self_improvement, "color": Colors.deepPurple},
       {"title": "Discussions & Q&A", "icon": Icons.chat, "color": Colors.red},
@@ -192,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(builder: (context) => const AssignmentsPage()),
             );
-          } else if (title == "Notes & Resources") {
+          } else if (title == "Flashcards") {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const NewFlashcardPage()),

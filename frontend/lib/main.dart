@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:onboarding/feed.dart';
 import 'package:onboarding/prof.dart';
 import 'package:onboarding/resultsPage.dart';
-import 'package:provider/provider.dart'; // For ThemeProvider
-import 'theme_provider.dart'; // Theme management
-import 'settings.dart'; // Settings page
-// Feed page
-import 'home_page.dart'; // Home page
-import 'login_page.dart'; // Login page
-import 'signup_page.dart'; // Signup page
-import 'onboarding_page.dart'; // Onboarding page
-import 'otp.dart'; // OTP verification page
+import 'package:provider/provider.dart';
+import 'theme_provider.dart';
+import 'settings.dart';
+import 'home_page.dart';
+import 'login_page.dart';
+import 'signup_page.dart';
+import 'onboarding_page.dart';
+import 'otp.dart';
+import 'flashcard_units.dart';
+import 'assignments.dart';
 import 'waiting_page.dart';
 import 'interests.dart';
-//import 'report_page.dart';
+import 'package:lottie/lottie.dart';
+
 void main() {
   runApp(
     ChangeNotifierProvider(
@@ -31,7 +33,7 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'GariScan',
+      title: 'StudentCompanionApp',
       theme: ThemeData(
         primarySwatch: Colors.purple,
         brightness: themeProvider.isDarkMode ? Brightness.dark : Brightness.light,
@@ -46,11 +48,13 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/settings': (context) => const SettingsPage(),
         '/feed': (context) => FeedPageApp(),
-        '/waiting_page':(context) =>GariscanWaitingPage(userId: '',),
-        '/profile':(context)=>ProfPage(),
-        '/result':(context)=>ResultsPage(resultData: {},),
-        '/interests':(context)=>InterestsPage(),
-         //'/report': (context) => ReportPage(title: '', pdfPath: '', imageUrl: '', details: '',),
+        '/waiting_page': (context) => GariscanWaitingPage(userId: ''),
+        '/profile': (context) => ProfPage(),
+        //'/classrooms': (context) => const ClassroomLinksPage(),
+        '/result': (context) => ResultsPage(resultData: {}),
+          '/assignments': (context) => const AssignmentsPage(),
+    '/flashcards': (context) => const NewFlashcardPage(),
+        '/interests': (context) => InterestsPage(),
       },
     );
   }
@@ -64,27 +68,47 @@ class OnboardingWrapper extends StatelessWidget {
     return OnboardingPage(
       pages: [
         OnboardingPageModel(
-          title: 'Welcome to GariScan',
-          description: 'Your go-to app for vehicle damage scanning.',
-          image: 'assets/image0.png',
+          title: 'Welcome to CurioScholar',
+          description: 'Fuel your academic curiosity.',
+          image: Lottie.asset(
+            'assets/lottie/screen0.json',
+            height: 300,
+            width: 300,
+            fit: BoxFit.contain,
+          ),
           bgColor: Colors.purple,
         ),
         OnboardingPageModel(
-          title: 'Analyze Anywhere',
-          description: 'Upload an image and assess it in minutes.',
-          image: 'assets/image3.png',
+          title: 'Personalized Recommendations',
+          description: 'Get research that matches your interests.',
+          image: Lottie.asset(
+            'assets/lottie/screen1.json',
+            height: 300,
+            width: 300,
+            fit: BoxFit.contain,
+          ),
           bgColor: Colors.purple,
         ),
         OnboardingPageModel(
-          title: 'Cost Estimates',
-          description: 'Find out repair costs in a few clicks.',
-          image: 'assets/money.gif',
+          title: 'Select Your Interests',
+          description: 'Choose topics you care about most.',
+          image: Lottie.asset(
+            'assets/lottie/screen2.json',
+            height: 300,
+            width: 300,
+            fit: BoxFit.contain,
+          ),
           bgColor: Colors.purple,
         ),
         OnboardingPageModel(
-          title: 'Track Your History',
-          description: 'Keep records of your assessments.',
-          image: 'assets/image1.png',
+          title: 'Explore and Learn',
+          description: 'Discover articles curated for you.',
+          image: Lottie.asset(
+            'assets/lottie/screen3.json',
+            height: 300,
+            width: 300,
+            fit: BoxFit.contain,
+          ),
           bgColor: Colors.purple,
         ),
       ],

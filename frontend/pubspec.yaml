@@ -54,3 +54,7 @@ flutter:
     - assets/animations/motivation.json
     - assets/pdf/pdf1.pdf
     - assets/background_soft.jpg
+    - assets/lottie/screen1.json
+    - assets/lottie/screen2.json
+    - assets/lottie/screen3.json
+    - assets/lottie/screen0.json

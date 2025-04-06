@@ -125,13 +125,14 @@ class _TopicsPageState extends State<TopicsPage> {
                 children: [
                   const SizedBox(height: 20),
                   Text(
-                    widget.unit,
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepPurple,
-                    ),
-                  ),
+  "Topics: ${widget.unit}",
+  style: const TextStyle(
+    fontSize: 30,
+    fontWeight: FontWeight.bold,
+    color: Colors.deepPurple,
+  ),
+),
+
                   const SizedBox(height: 20),
                   Expanded(
                     child: topics.isEmpty
@@ -180,7 +181,7 @@ class _TopicsPageState extends State<TopicsPage> {
                                     ],
                                   ),
                                   child: Text(
-                                    topic,
+                                    topic,                             
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
