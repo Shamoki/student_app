@@ -1,9 +1,8 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User'); // ⬅️ Needed to fetch full user details
 
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  
-  // Token format: "Bearer <token>"
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
@@ -12,7 +11,19 @@ function authenticateToken(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY || 'defaultsecret');
-    req.user = decoded; // Makes user info (like userId) available in req.user
+
+    // ✅ Fetch the full user to access the role
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found.' });
+    }
+
+    // ✅ Attach userId and role for downstream use
+    req.user = {
+      userId: user._id,
+      role: user.role,
+    };
+
     next();
   } catch (err) {
     return res.status(403).json({ msg: 'Invalid or expired token' });

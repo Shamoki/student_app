@@ -1,22 +1,24 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
+import numpy as np
+import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
-from collections import defaultdict
-import re
+from sklearn.preprocessing import normalize
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+from collections import defaultdict
 
 app = Flask(__name__)
 CORS(app)
 
 # ✅ Connect to MongoDB Atlas
 client = MongoClient("mongodb+srv://leonlangat:Shineguy%402001@cluster0.dmesj.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0")
-db = client["test"]  # Your MongoDB database name from Atlas
-users_collection = db["users"]  # Your users collection
+db = client["test"]
+users_collection = db["users"]
 
-# 🧠 Load dataset
+# 🧑‍💻 Load and preprocess dataset
 df = pd.read_csv("cleaned_dataset.csv")
 df.dropna(subset=['title', 'abstract', 'categories'], inplace=True)
 
@@ -25,13 +27,14 @@ df['abstract'] = df['abstract'].str.lower().apply(lambda x: re.sub(r'[^a-z0-9\s]
 df['id'] = df['id'].astype(str)
 df['link'] = 'https://arxiv.org/pdf/' + df['id']
 
+# Limit dataset size for performance
 df_sample = df.iloc[:10000].copy()
 tfidf = TfidfVectorizer(stop_words="english")
 tfidf_matrix = tfidf.fit_transform(df_sample['abstract'])
 cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
 indices = pd.Series(df_sample.index, index=df_sample['title']).drop_duplicates()
 
-# 📚 Group categories
+# Group categories for frontend
 category_map = defaultdict(set)
 for cat_string in df['categories'].dropna():
     for cat in cat_string.split():
@@ -43,7 +46,6 @@ for cat_string in df['categories'].dropna():
 
 grouped_categories = {main: sorted(list(subs)) for main, subs in category_map.items()}
 
-
 @app.route('/recommend/title', methods=['POST'])
 def recommend_by_title():
     title = request.json.get("title", "").lower()
@@ -53,11 +55,18 @@ def recommend_by_title():
     idx = indices[title]
     sim_scores = list(enumerate(cosine_sim[idx]))
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:15]
-    sim_index = [i[0] for i in sim_scores]
 
-    recommendations = df_sample.iloc[sim_index][['title', 'categories', 'link']]
-    return jsonify(recommendations.to_dict(orient="records"))
+    results = []
+    for i, score in sim_scores:
+        paper = df_sample.iloc[i]
+        results.append({
+            "title": paper['title'],
+            "categories": paper['categories'],
+            "link": paper['link'],
+            "similarity_score": round(score, 4)
+        })
 
+    return jsonify(results)
 
 @app.route('/recommend/categories', methods=['POST'])
 def recommend_by_category():
@@ -67,34 +76,48 @@ def recommend_by_category():
     if not user_topics:
         return jsonify({"error": "No topics provided"}), 400
 
-    pattern = '|'.join([re.escape(cat) for cat in user_topics])
-    print("🔍 Regex pattern:", pattern)
+    topic_to_indices = {}
+    N_per_topic = 30  # Articles to sample per topic
 
-    filtered_articles = df[df['categories'].str.contains(pattern, na=False)]
-    print("📊 Matching articles found:", len(filtered_articles))
+    for topic in user_topics:
+        matches = df_sample.index[df_sample['categories'].str.contains(re.escape(topic), na=False)].tolist()
+        topic_to_indices[topic] = matches[:N_per_topic]
 
-    if filtered_articles.empty:
+    all_indices = [i for sublist in topic_to_indices.values() for i in sublist]
+    if not all_indices:
         return jsonify([])
 
-    if len(filtered_articles) >= 15:
-        recommended = filtered_articles.sample(n=15)
-    else:
-        recommended = filtered_articles.sample(frac=1.0)
+    topic_vectors = []
+    for topic, indices_list in topic_to_indices.items():
+        if indices_list:
+            vectors = tfidf_matrix[indices_list]
+            normalized_vectors = normalize(vectors, axis=1)
+            topic_vectors.append(normalized_vectors.toarray())
 
-    recommendations = recommended[['title', 'categories', 'link']]
+    if not topic_vectors:
+        return jsonify([])
+
+    user_profile_vector = np.vstack(topic_vectors).mean(axis=0).reshape(1, -1)
+
+    filtered_articles = df_sample.iloc[all_indices].copy()
+    filtered_tfidf = tfidf_matrix[all_indices]
+
+    user_sim_scores = linear_kernel(user_profile_vector, filtered_tfidf).flatten()
+    filtered_articles['similarity_score'] = user_sim_scores
+    filtered_articles = filtered_articles.sort_values(by='similarity_score', ascending=False).head(15)
+    filtered_articles['similarity_score'] = filtered_articles['similarity_score'].round(4)
+
+    recommendations = filtered_articles[['title', 'categories', 'link', 'similarity_score']]
     return jsonify(recommendations.to_dict(orient="records"))
-
 
 @app.route('/categories', methods=['GET'])
 def get_categories():
     all_categories = df['categories'].dropna().str.split().explode().unique().tolist()
     return jsonify(all_categories)
 
-
 @app.route('/grouped-categories', methods=['GET'])
 def get_grouped_categories():
     return jsonify(grouped_categories)
-
 
 @app.route('/api/auth/set-interests', methods=['PUT'])
 def set_interests():
@@ -130,7 +153,6 @@ def set_interests():
         print(f"❌ Error updating interests in MongoDB: {e}")
         return jsonify({"error": "Server error"}), 500
 
-
 @app.route('/api/auth/get-interests/<user_id>', methods=['GET'])
 def get_interests(user_id):
     print(f"📤 Fetching interests for user {user_id}")
@@ -151,7 +173,6 @@ def get_interests(user_id):
     except Exception as e:
         print(f"❌ Error fetching user interests from MongoDB: {e}")
         return jsonify({"error": "Server error"}), 500
-
 
 # 🚀 Start server
 if __name__ == '__main__':

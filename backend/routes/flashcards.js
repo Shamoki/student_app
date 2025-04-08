@@ -3,7 +3,7 @@ const router = express.Router();
 const Flashcard = require("../models/Flashcard");
 const authenticateToken = require("../middlewares/authenticateToken");
 
-// 🔒 All routes below this require a valid token
+// 🔒 All routes below this require a valid token with role
 router.use(authenticateToken);
 
 // ✅ Get all flashcards (filtered by user, unit, topic, pagination)
@@ -48,8 +48,12 @@ router.get("/topics/:unit", async (req, res) => {
   }
 });
 
-// ✅ Add a new flashcard (attach user)
+// ✅ Add a new flashcard (only for teachers)
 router.post("/", async (req, res) => {
+  if (req.user.role !== "teacher") {
+    return res.status(403).json({ error: "Only teachers can create flashcards" });
+  }
+
   const { unit, topic, question, answer } = req.body;
 
   if (!unit || !topic || !question || !answer) {
@@ -72,8 +76,12 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Delete a flashcard by ID (must belong to user)
+// ✅ Delete a flashcard by ID (only for teachers, must belong to them)
 router.delete("/:id", async (req, res) => {
+  if (req.user.role !== "teacher") {
+    return res.status(403).json({ error: "Only teachers can delete flashcards" });
+  }
+
   try {
     const result = await Flashcard.findOneAndDelete({
       _id: req.params.id,
