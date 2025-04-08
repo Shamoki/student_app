@@ -156,9 +156,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Map<String, dynamic>> features = [
       {"title": "Assignments & Deadlines", "icon": Icons.assignment, "color": Colors.blue},
       {"title": "Flashcards", "icon": Icons.book, "color": Colors.green},
-      {"title": "Study Planner", "icon": Icons.schedule, "color": Colors.orange},
-      {"title": "Wellness & Motivation", "icon": Icons.self_improvement, "color": Colors.deepPurple},
-      {"title": "Discussions & Q&A", "icon": Icons.chat, "color": Colors.red},
+      //{"title": "Study Planner", "icon": Icons.schedule, "color": Colors.orange},
+      //{"title": "Wellness & Motivation", "icon": Icons.self_improvement, "color": Colors.deepPurple},
+     // {"title": "Discussions & Q&A", "icon": Icons.chat, "color": Colors.red},
     ];
 
     return GridView.builder(

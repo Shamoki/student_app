@@ -174,6 +174,37 @@ def get_interests(user_id):
         print(f"❌ Error fetching user interests from MongoDB: {e}")
         return jsonify({"error": "Server error"}), 500
 
+@app.route('/api/auth/reset-interests', methods=['POST'])
+def reset_interests():
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        result = users_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {
+                "$set": {
+                    "interests": {
+                        "categories": [],
+                        "subcategories": []
+                    },
+                    "interestsSet": False
+                }
+            }
+        )
+
+        if result.matched_count == 0:
+            return jsonify({"error": "User not found"}), 404
+
+        return jsonify({"message": "Interests reset successfully"}), 200
+
+    except Exception as e:
+        print(f"❌ Error resetting interests: {e}")
+        return jsonify({"error": "Server error"}), 500
+
 # 🚀 Start server
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
