@@ -8,6 +8,7 @@ import 'assignments.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'classroom_links.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -156,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Map<String, dynamic>> features = [
       {"title": "Assignments & Deadlines", "icon": Icons.assignment, "color": Colors.blue},
       {"title": "Flashcards", "icon": Icons.book, "color": Colors.green},
-      //{"title": "Study Planner", "icon": Icons.schedule, "color": Colors.orange},
+      {"title": "Online class links", "icon": Icons.schedule, "color": Colors.orange},
       //{"title": "Wellness & Motivation", "icon": Icons.self_improvement, "color": Colors.deepPurple},
      // {"title": "Discussions & Q&A", "icon": Icons.chat, "color": Colors.red},
     ];
@@ -196,6 +197,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const NewFlashcardPage()),
+            );
+          }
+          else if (title == "Online class links") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ClassroomLinksPage()),
             );
           }
         },

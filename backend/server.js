@@ -13,6 +13,8 @@ const flashcardsRoutes= require('./routes/flashcards');
 const unitRoutes = require("./routes/units");
 const topicsRoutes = require('./routes/topics');
 const recommendRoutes = require('./routes/recommendRoutes');
+const classroomLinksRoute = require('./routes/classroomLinks');
+
 
 
 
@@ -56,6 +58,7 @@ app.use('/api/assignments', assignmentRoutes); // ✅ Mount the assignments API
 app.use('/api/flashcards', flashcardsRoutes);
 app.use("/api/units", unitRoutes);
 app.use('/api/topics', topicsRoutes);
+app.use('/api/classroom-links', classroomLinksRoute);
 
 
 

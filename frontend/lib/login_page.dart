@@ -77,15 +77,21 @@ class _LoginPageState extends State<LoginPage> {
         passwordController.clear();
 
         // Navigate based on whether interests are set
-        if (interestsSet) {
-  if (role == 'teacher') {
-    Navigator.pushReplacementNamed(context, '/teacher-home', arguments: userId);
-  } else {
-    Navigator.pushReplacementNamed(context, '/home', arguments: userId);
-  }
+       // Clear input fields
+emailController.clear();
+passwordController.clear();
+
+// Navigate based on role and interests
+if (role == 'teacher') {
+  Navigator.pushReplacementNamed(context, '/teacher-home', arguments: userId);
 } else {
-  Navigator.pushReplacementNamed(context, '/interests', arguments: userId);
+  if (interestsSet) {
+    Navigator.pushReplacementNamed(context, '/home', arguments: userId);
+  } else {
+    Navigator.pushReplacementNamed(context, '/interests', arguments: userId);
+  }
 }
+
 
       } else {
         // Display error message
