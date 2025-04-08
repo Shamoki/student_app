@@ -6,8 +6,13 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true },
   isEmailVerified: { type: Boolean, default: false },
-
   interestsSet: { type: Boolean, default: false }, // ✅ Tracks if user selected interests
+  role: {
+    type: String,
+    enum: ['student', 'teacher'],
+    default: 'student', // Assume most are students unless otherwise set
+  },
+  
 
   // ✅ Updated interests structure
   interests: {
@@ -18,6 +23,7 @@ const UserSchema = new mongoose.Schema({
       default: {},
     },
   },
+  
 
   firstLogin: { type: Boolean, default: true }, // ✅ Controls if recommendations should be shown
 
@@ -39,5 +45,6 @@ UserSchema.pre('save', async function (next) {
 UserSchema.methods.verifyPassword = async function (password) {
   return argon2.verify(this.password, password);
 };
+
 
 module.exports = mongoose.model('User', UserSchema);

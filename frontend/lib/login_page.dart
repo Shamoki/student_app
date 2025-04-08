@@ -50,7 +50,10 @@ class _LoginPageState extends State<LoginPage> {
         var token = responseData['token'];
         var username = responseData['user']['username'];
         var email = responseData['user']['email'];
-        var interestsSet = responseData['user']['interestsSet']; // ✅ Fetch interestsSet
+        var interestsSet = responseData['user']['interestsSet'];
+        var role = responseData['user']['role'];
+        
+        // ✅ Fetch interestsSet
 
         // Store token, userId, username, email, and interestsSet in SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -59,6 +62,7 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('username', username); 
         await prefs.setString('email', email);        
         await prefs.setBool('interestsSet', interestsSet); // ✅ Save interestsSet status
+        await prefs.setString('role', role);
 
         // Debugging to confirm data storage
         print('Login Successful');
@@ -74,10 +78,15 @@ class _LoginPageState extends State<LoginPage> {
 
         // Navigate based on whether interests are set
         if (interestsSet) {
-          Navigator.pushReplacementNamed(context, '/home', arguments: userId);
-        } else {
-          Navigator.pushReplacementNamed(context, '/interests', arguments: userId);
-        }
+  if (role == 'teacher') {
+    Navigator.pushReplacementNamed(context, '/teacher-home', arguments: userId);
+  } else {
+    Navigator.pushReplacementNamed(context, '/home', arguments: userId);
+  }
+} else {
+  Navigator.pushReplacementNamed(context, '/interests', arguments: userId);
+}
+
       } else {
         // Display error message
         var errorMsg = jsonDecode(response.body)['msg'] ?? 'Login failed';

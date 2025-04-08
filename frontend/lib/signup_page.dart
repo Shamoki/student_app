@@ -19,6 +19,7 @@ class _SignupPageState extends State<SignupPage> {
 
   bool isLoading = false;
   String? emailError;
+  String selectedRole = 'student'; // Default role
 
   bool isStrathmoreEmail(String email) {
     final regex = RegExp(r'^[a-zA-Z0-9._%+-]+@strathmore\.edu$');
@@ -45,6 +46,7 @@ class _SignupPageState extends State<SignupPage> {
           'username': username,
           'email': email,
           'password': password,
+          'role': selectedRole, // Send role to backend
         }),
       );
 
@@ -73,6 +75,89 @@ class _SignupPageState extends State<SignupPage> {
         isLoading = false;
       });
     }
+  }
+
+  void _showRoleSelector() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: 250,
+          child: Column(
+            children: [
+              const Text(
+                "Select Your Role",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.2,
+                  children: [
+                    _buildRoleCard(
+                      "Student",
+                      Icons.school,
+                      Colors.blue,
+                      () {
+                        setState(() => selectedRole = 'student');
+                        Navigator.pop(context);
+                      },
+                    ),
+                    _buildRoleCard(
+                      "Teacher",
+                      Icons.person_outline,
+                      Colors.green,
+                      () {
+                        setState(() => selectedRole = 'teacher');
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRoleCard(String label, IconData icon, Color color, VoidCallback onTap) {
+    final isSelected = selectedRole == label.toLowerCase();
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isSelected ? color : Colors.transparent, width: 2),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 40, color: color),
+                const SizedBox(height: 12),
+                Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color)),
+              ],
+            ),
+            if (isSelected)
+              const Positioned(
+                top: 10,
+                right: 10,
+                child: Icon(Icons.check_circle, color: Colors.green, size: 20),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -205,6 +290,21 @@ class _SignupPageState extends State<SignupPage> {
                               fillColor: Colors.deepPurple.withOpacity(0.1),
                               filled: true,
                               prefixIcon: const Icon(Icons.lock),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: _showRoleSelector,
+                            icon: const Icon(Icons.school),
+                            label: Text(
+                              "I am a ${selectedRole == 'teacher' ? 'Teacher' : 'Student'}",
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                              foregroundColor: Colors.deepPurple,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                             ),
                           ),
                         ],

@@ -15,6 +15,7 @@ import 'assignments.dart';
 import 'waiting_page.dart';
 import 'interests.dart';
 import 'package:lottie/lottie.dart';
+import 'teacher_homepage.dart';
 
 void main() {
   runApp(
@@ -52,9 +53,11 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => ProfPage(),
         //'/classrooms': (context) => const ClassroomLinksPage(),
         '/result': (context) => ResultsPage(resultData: {}),
-          '/assignments': (context) => const AssignmentsPage(),
-    '/flashcards': (context) => const NewFlashcardPage(),
+        '/assignments': (context) => const AssignmentsPage(),
+        '/flashcards': (context) => const NewFlashcardPage(),
         '/interests': (context) => InterestsPage(),
+        '/teacher-home': (context) => const TeacherHomePage(),
+
       },
     );
   }

@@ -18,7 +18,7 @@ let pendingUsers = {};
 
 // ✅ SIGNUP - Generate OTP & Temporarily Save User
 router.post('/signup', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, role } = req.body;
 
   try {
     if (!username || !email || !password) {
@@ -39,7 +39,7 @@ router.post('/signup', async (req, res) => {
     await generateAndSendOTP(email);
 
     // Save user details temporarily in memory
-    pendingUsers[email] = { username, email, password };
+    pendingUsers[email] = { username, email, password, role: role || 'student' };
     console.log(`User details temporarily saved: ${JSON.stringify(pendingUsers[email])}`);
 
     res.status(201).json({ msg: 'OTP sent to your Strathmore email.' });
@@ -67,8 +67,13 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ msg: 'User details not found. Please sign up again.' });
     }
 
-    // ✅ Save user to database
-    const user = new User({ ...userDetails, isEmailVerified: true, interestsSet: false });
+    // ✅ Save user to database with role
+    const user = new User({
+      ...userDetails,
+      isEmailVerified: true,
+      interestsSet: false,
+    });
+
     await user.save();
     console.log(`User successfully registered: ${email}`);
 
@@ -114,6 +119,7 @@ router.post('/login', async (req, res) => {
       user: {
         username: user.username,
         email: user.email,
+        role: user.role, // ✅ include role here
         interestsSet: user.interestsSet,
         interests: user.interests || { categories: [], subcategories: [] },
       },
@@ -136,7 +142,6 @@ router.put('/set-interests', async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-  
     user.interests = { categories, subcategories };
     user.interestsSet = true;
     await user.save();
