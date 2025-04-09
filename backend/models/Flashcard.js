@@ -1,12 +1,11 @@
 const mongoose = require("mongoose");
 
-// Define schema
 const FlashcardSchema = new mongoose.Schema(
   {
     unit: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Unit", // 👈 reference to Unit model
       required: true,
-      trim: true,
     },
     topic: {
       type: String,
@@ -26,13 +25,10 @@ const FlashcardSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true, // ✅ Ensure each flashcard belongs to a user
+      required: true,
     },
   },
-  {
-    timestamps: true, // Adds createdAt and updatedAt fields automatically
-  }
+  { timestamps: true }
 );
 
-// Export model
 module.exports = mongoose.model("Flashcard", FlashcardSchema);

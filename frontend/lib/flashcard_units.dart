@@ -5,7 +5,6 @@ import 'package:lottie/lottie.dart';
 import 'package:onboarding/flashcards.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class NewFlashcardPage extends StatefulWidget {
   const NewFlashcardPage({super.key});
 
@@ -14,7 +13,7 @@ class NewFlashcardPage extends StatefulWidget {
 }
 
 class _NewFlashcardPageState extends State<NewFlashcardPage> {
-  List<String> units = [];
+  List<Map<String, dynamic>> units = [];
   final TextEditingController _newUnitController = TextEditingController();
 
   @override
@@ -36,7 +35,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
 
     if (response.statusCode == 200) {
       setState(() {
-        units = List<String>.from(json.decode(response.body));
+        units = List<Map<String, dynamic>>.from(json.decode(response.body));
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -77,8 +76,9 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                 );
 
                 if (response.statusCode == 201) {
+                  final addedUnit = json.decode(response.body);
                   setState(() {
-                    units.add(newUnit);
+                    units.add(addedUnit);
                   });
                   Navigator.pop(context);
                   _newUnitController.clear();
@@ -96,16 +96,66 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
     );
   }
 
+  void _showDeleteConfirmation(Map<String, dynamic> unit) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Delete Unit and Flashcards"),
+          content: Text("Are you sure you want to delete \"${unit['name']}\" and all its flashcards?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteUnit(unit['_id']);
+              },
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteUnit(String unitId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final response = await http.delete(
+      Uri.parse("http://localhost:5000/api/units/$unitId"),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        units.removeWhere((u) => u['_id'] == unitId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Unit and its flashcards deleted")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to delete unit")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // 🖼️ Background
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/background_soft.jpg'),
+                image: const AssetImage('assets/background_soft.jpg'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
                   Colors.white.withOpacity(0.9),
@@ -121,7 +171,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                 children: [
                   const SizedBox(height: 20),
                   const Text(
-                    "Your Classes",
+                    "Flashcard Unit:",
                     style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.deepPurple),
                   ),
                   const SizedBox(height: 20),
@@ -134,7 +184,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                 Lottie.asset('assets/animations/motivation.json', height: 200),
                                 const SizedBox(height: 20),
                                 const Text(
-                                  "No Classes yet",
+                                  "You have no flashcards yet",
                                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
                                 ),
                               ],
@@ -144,37 +194,65 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                             itemCount: units.length,
                             itemBuilder: (context, index) {
                               final unit = units[index];
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => Flashcards(unit: '',topic: ''), // ✅ Pass the selected unit
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(vertical: 8),
-                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.95),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 8,
-                                        offset: Offset(0, 4),
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: const [
+                                    BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => Flashcards(
+        unitId: unit['_id'],
+        unitName: unit['name'],
+        topic: '', unit: '',
+      ),
+    ),
+  );
+},
+
+                                        child: Text(
+                                          unit['name'],
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Colors.deepPurple,
+                                          ),
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                  child: Text(
-                                    unit,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Colors.deepPurple,
                                     ),
-                                  ),
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(Icons.more_vert, color: Colors.deepPurple),
+                                      onSelected: (value) {
+                                        if (value == 'delete') {
+                                          _showDeleteConfirmation(unit);
+                                        }
+                                      },
+                                      itemBuilder: (BuildContext context) => [
+                                        PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: const [
+                                              Icon(Icons.delete, color: Colors.red),
+                                              SizedBox(width: 8),
+                                              Text("Delete", style: TextStyle(color: Colors.red)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -190,7 +268,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
         heroTag: "add_class",
         onPressed: _showAddUnitDialog,
         backgroundColor: Colors.deepPurple,
-        tooltip: "Add Class",
+        tooltip: "Add Unit",
         child: const Icon(Icons.add),
       ),
     );

@@ -162,7 +162,7 @@ class _TopicsPageState extends State<TopicsPage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => Flashcards(unit: widget.unit, topic: topic),
+                                      builder: (_) => Flashcards(unit: widget.unit, topic: topic, unitId: '', unitName: '',),
                                     ),
                                   );
                                 },

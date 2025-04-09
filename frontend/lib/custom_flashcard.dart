@@ -4,8 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class CustomFlashcardPage extends StatefulWidget {
-  final String unit;
-  const CustomFlashcardPage({super.key, required this.unit});
+  final String unitId;
+  final String unitName;
+
+  const CustomFlashcardPage({
+    super.key,
+    required this.unitId,
+    required this.unitName,
+  });
 
   @override
   State<CustomFlashcardPage> createState() => _CustomFlashcardPageState();
@@ -33,7 +39,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
     if (token == null) return;
 
     final response = await http.get(
-      Uri.parse('http://localhost:5000/api/flashcards/topics/${Uri.encodeComponent(widget.unit)}'),
+      Uri.parse('http://localhost:5000/api/topics/${Uri.encodeComponent(widget.unitId)}'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -42,7 +48,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
       setState(() {
         topics = fetchedTopics;
         if (fetchedTopics.isNotEmpty && !fetchedTopics.contains(selectedTopic)) {
-          selectedTopic = fetchedTopics.last; // fallback to last added topic
+          selectedTopic = fetchedTopics.last;
         }
       });
     } else {
@@ -65,7 +71,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
-        "unit": widget.unit,
+        "unit": widget.unitId,
         "name": newTopic,
       }),
     );
@@ -84,9 +90,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
   }
 
   Future<void> _saveFlashcard() async {
-    if (_questionController.text.isEmpty ||
-        _answerController.text.isEmpty ||
-        selectedTopic == null) {
+    if (_questionController.text.isEmpty || _answerController.text.isEmpty || selectedTopic == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
       );
@@ -98,9 +102,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
 
     if (token == null) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     final response = await http.post(
       Uri.parse('http://localhost:5000/api/flashcards'),
@@ -109,16 +111,14 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
-        "unit": widget.unit,
+        "unitId": widget.unitId,
         "topic": selectedTopic,
         "question": _questionController.text,
         "answer": _answerController.text,
       }),
     );
 
-    setState(() {
-      _isLoading = false;
-    });
+    setState(() => _isLoading = false);
 
     if (response.statusCode == 201) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -151,7 +151,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
               onPressed: () {
                 final newTopic = _newTopicController.text.trim();
                 if (newTopic.isNotEmpty) {
-                  Navigator.pop(context); // close dialog first
+                  Navigator.pop(context);
                   _addTopic(newTopic);
                 }
               },
@@ -188,7 +188,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
                 children: [
                   const SizedBox(height: 10),
                   Text(
-                    "Add Flashcard to\n${widget.unit}",
+                    "Add Flashcard to\n${widget.unitName}",
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -196,8 +196,6 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
                     ),
                   ),
                   const SizedBox(height: 30),
-
-                  // 🔽 Topic Dropdown
                   DropdownButtonFormField<String>(
                     value: selectedTopic,
                     items: topics.map((topic) {
@@ -206,18 +204,13 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
                         child: Text(topic),
                       );
                     }).toList(),
-                    onChanged: (newValue) {
-                      setState(() => selectedTopic = newValue);
-                    },
+                    onChanged: (newValue) => setState(() => selectedTopic = newValue),
                     decoration: const InputDecoration(
                       labelText: "Select Topic",
                       border: OutlineInputBorder(),
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  // ➕ Add Topic Button
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -225,10 +218,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
                       child: const Text("Add New Topic", style: TextStyle(color: Colors.blue)),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
-                  // ❓ Question Field
                   TextField(
                     controller: _questionController,
                     decoration: const InputDecoration(
@@ -236,10 +226,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
                       border: OutlineInputBorder(),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
-                  // 💬 Answer Field
                   TextField(
                     controller: _answerController,
                     decoration: const InputDecoration(
@@ -247,10 +234,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
                       border: OutlineInputBorder(),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  // ✅ Submit Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(

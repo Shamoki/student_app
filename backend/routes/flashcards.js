@@ -3,19 +3,19 @@ const router = express.Router();
 const Flashcard = require("../models/Flashcard");
 const authenticateToken = require("../middlewares/authenticateToken");
 
-// 🔒 All routes below this require a valid token with role
 router.use(authenticateToken);
 
-// ✅ Get all flashcards (filtered by user, unit, topic, pagination)
+// ✅ Get flashcards (user-specific, filter by unitId and topic)
 router.get("/", async (req, res) => {
   try {
-    const { unit, topic, page = 1, limit = 20 } = req.query;
+    const { unitId, topic, page = 1, limit = 20 } = req.query;
 
-    const filter = { user: req.user.userId }; // Only this user's flashcards
-    if (unit) filter.unit = unit;
+    const filter = { user: req.user.userId };
+    if (unitId) filter.unit = unitId;
     if (topic) filter.topic = topic;
 
     const flashcards = await Flashcard.find(filter)
+      .populate("unit") // Optional: fetch unit details
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
@@ -25,48 +25,25 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Get all distinct units (user-specific)
-router.get("/units", async (req, res) => {
-  try {
-    const units = await Flashcard.distinct("unit", { user: req.user.userId });
-    res.json(units);
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ✅ Get all topics in a unit (user-specific)
-router.get("/topics/:unit", async (req, res) => {
-  try {
-    const topics = await Flashcard.distinct("topic", {
-      user: req.user.userId,
-      unit: req.params.unit,
-    });
-    res.json(topics);
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ✅ Add a new flashcard (only for teachers)
+// ✅ Add a new flashcard (teachers only)
 router.post("/", async (req, res) => {
   if (req.user.role !== "teacher") {
     return res.status(403).json({ error: "Only teachers can create flashcards" });
   }
 
-  const { unit, topic, question, answer } = req.body;
+  const { unitId, topic, question, answer } = req.body;
 
-  if (!unit || !topic || !question || !answer) {
-    return res.status(400).json({ error: "Unit, topic, question, and answer are required" });
+  if (!unitId || !topic || !question || !answer) {
+    return res.status(400).json({ error: "All fields are required" });
   }
 
   try {
     const newFlashcard = new Flashcard({
-      unit,
+      unit: unitId,
       topic,
       question,
       answer,
-      user: req.user.userId, // Attach user ID
+      user: req.user.userId,
     });
 
     await newFlashcard.save();
@@ -76,7 +53,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Delete a flashcard by ID (only for teachers, must belong to them)
+// ✅ Delete a specific flashcard (teachers only)
 router.delete("/:id", async (req, res) => {
   if (req.user.role !== "teacher") {
     return res.status(403).json({ error: "Only teachers can delete flashcards" });

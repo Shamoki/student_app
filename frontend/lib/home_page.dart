@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onboarding/feed.dart';
-import 'package:onboarding/flashcard_units.dart';
+//import 'package:onboarding/flashcards.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 import 'prof.dart';
 import 'assignments.dart';
@@ -101,31 +101,45 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ✅ Check if an assignment is due in 2 days or less
   Future<void> _checkUpcomingDeadlines() async {
-    try {
-      final response = await http.get(Uri.parse('http://localhost:5000/api/assignments'));
-      if (response.statusCode == 200) {
-        List<dynamic> assignments = json.decode(response.body);
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
 
-        DateTime now = DateTime.now();
-        for (var assignment in assignments) {
-          DateTime dueDate = DateTime.parse(assignment["dueDate"]);
-          if (dueDate.difference(now).inDays <= 2) {
-            setState(() {
-              hasUpcomingDeadline = true;
-            });
-            return; // ✅ Stop checking after finding an assignment
-          }
+    if (token == null) return;
+
+    final response = await http.get(
+      Uri.parse('http://localhost:5000/api/assignments'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> assignments = json.decode(response.body);
+      DateTime now = DateTime.now();
+
+      for (var assignment in assignments) {
+        DateTime dueDate = DateTime.parse(assignment["dueDate"]);
+        if (!assignment["completed"] && dueDate.difference(now).inDays <= 2) {
+          setState(() {
+            hasUpcomingDeadline = true;
+          });
+          return;
         }
-
-        // If no deadline is found, keep it false
-        setState(() {
-          hasUpcomingDeadline = false;
-        });
       }
-    } catch (e) {
-      print("Error fetching assignments: $e");
+
+      setState(() {
+        hasUpcomingDeadline = false;
+      });
+    } else {
+      print("Failed to fetch assignments. Status: ${response.statusCode}");
     }
+  } catch (e) {
+    print("Error fetching assignments: $e");
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -193,12 +207,12 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(builder: (context) => const AssignmentsPage()),
             );
-          } else if (title == "Flashcards") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const NewFlashcardPage()),
-            );
-          }
+          } //else if (title == "Flashcards") {
+            //Navigator.push(
+              //context,
+              //MaterialPageRoute(builder: (context) => const Flashcards()),
+           // );
+          //}
           else if (title == "Online class links") {
             Navigator.push(
               context,
@@ -242,7 +256,7 @@ class DynamicTopWidget extends StatelessWidget {
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
-                "You have a deadline soon!",
+                "You have a assignment deadline soon!",
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 2,

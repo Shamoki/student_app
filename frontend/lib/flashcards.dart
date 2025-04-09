@@ -8,17 +8,21 @@ import 'custom_flashcard.dart';
 import 'auto_flashcard.dart';
 import 'package:flutter/services.dart';
 
-
 class Flashcards extends StatefulWidget {
-  final String unit;
+  final String unitId;
+  final String unitName;
   final String topic;
 
-  const Flashcards({super.key, required this.unit, required this.topic});
+  const Flashcards({
+    super.key,
+    required this.unitId,
+    required this.unitName,
+    required this.topic, required String unit,
+  });
 
   @override
   State<Flashcards> createState() => _FlashcardsState();
 }
-
 
 class _FlashcardsState extends State<Flashcards> {
   List<dynamic> flashcards = [];
@@ -43,12 +47,13 @@ class _FlashcardsState extends State<Flashcards> {
     }
 
     final response = await http.get(
-  Uri.parse('http://localhost:5000/api/flashcards?unit=${Uri.encodeComponent(widget.unit)}&topic=${Uri.encodeComponent(widget.topic)}'),
-  headers: {
-    'Authorization': 'Bearer $token',
-  },
-);
-
+      Uri.parse(
+        'http://localhost:5000/api/flashcards?unitId=${Uri.encodeComponent(widget.unitId)}&topic=${Uri.encodeComponent(widget.topic)}',
+      ),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
 
     if (response.statusCode == 200) {
       setState(() {
@@ -57,7 +62,7 @@ class _FlashcardsState extends State<Flashcards> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to fetch flashcards for this unit")),
+        const SnackBar(content: Text("Failed to fetch flashcards")),
       );
     }
   }
@@ -66,22 +71,15 @@ class _FlashcardsState extends State<Flashcards> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please log in again.")),
-      );
-      return;
-    }
+    if (token == null) return;
 
     final response = await http.delete(
       Uri.parse('http://localhost:5000/api/flashcards/$id'),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
-      _fetchFlashcardsByTopic(); // Refresh
+      _fetchFlashcardsByTopic();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to delete flashcard")),
@@ -139,13 +137,19 @@ class _FlashcardsState extends State<Flashcards> {
                       () {
                         Navigator.pop(context);
                         Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => CustomFlashcardPage(unit: widget.unit)),
-                        ).then((refresh) {
-                          if (refresh == true) {
-                            _fetchFlashcardsByTopic();
-                          }
-                        });
+  context,
+  MaterialPageRoute(
+    builder: (_) => CustomFlashcardPage(
+      unitId: widget.unitId,
+      unitName: widget.unitName,
+    ),
+  ),
+).then((refresh) {
+  if (refresh == true) {
+    _fetchFlashcardsByTopic();
+  }
+});
+
                       },
                     ),
                   ],
@@ -206,14 +210,15 @@ class _FlashcardsState extends State<Flashcards> {
                   children: [
                     const SizedBox(height: 20),
                     Text(
-  " ${widget.topic} Flashcards",
-  style: const TextStyle(
-    fontSize: 28,
-    fontWeight: FontWeight.bold,
-    color: Colors.deepPurple,
-  ),
-),
-
+                      widget.topic.isNotEmpty
+                          ? "${widget.unitName} – ${widget.topic} Flashcards"
+                          : "${widget.unitName} – Flashcards",
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     TextField(
                       controller: searchController,
