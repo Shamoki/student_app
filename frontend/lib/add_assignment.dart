@@ -170,21 +170,7 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
               ),
             ),
             Center(
-              child: ElevatedButton(
-                onPressed: _authenticateWithGoogle,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: const Text(
-                  "Fetch from Google Classroom",
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
-              ),
+              
             ),
             const SizedBox(height: 20),
             if (_isLoading)

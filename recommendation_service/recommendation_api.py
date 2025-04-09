@@ -4,10 +4,11 @@ import pandas as pd
 import numpy as np
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
+from sklearn.metrics.pairwise import linear_kernel, cosine_similarity
 from sklearn.preprocessing import normalize
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+from bson.errors import InvalidId
 from collections import defaultdict
 
 app = Flask(__name__)
@@ -18,23 +19,34 @@ client = MongoClient("mongodb+srv://leonlangat:Shineguy%402001@cluster0.dmesj.mo
 db = client["test"]
 users_collection = db["users"]
 
-# 🧑‍💻 Load and preprocess dataset
-df = pd.read_csv("cleaned_dataset.csv")
-df.dropna(subset=['title', 'abstract', 'categories'], inplace=True)
+# ✅ Load and preprocess dataset
+df = pd.read_csv("stratified_sample.csv")
+df.dropna(subset=['title', 'abstract', 'categories', 'id'], inplace=True)
 
+# ✅ Filter to keep only valid arXiv IDs
+arxiv_id_pattern = re.compile(r'^\d{4}\.\d{4,5}(v\d+)?$|^[a-z\-]+(.[A-Z]{2})?/\d{7}$')
+df = df[df['id'].apply(lambda x: bool(arxiv_id_pattern.match(str(x))))]
+
+# Clean text fields
 df['title'] = df['title'].str.lower().apply(lambda x: re.sub(r'[^a-z0-9\s]', '', x))
 df['abstract'] = df['abstract'].str.lower().apply(lambda x: re.sub(r'[^a-z0-9\s]', '', x))
 df['id'] = df['id'].astype(str)
+
+# ✅ Use /abs/ to avoid broken PDF links
 df['link'] = 'https://arxiv.org/pdf/' + df['id']
 
-# Limit dataset size for performance
+# ✅ Limit dataset size
 df_sample = df.iloc[:10000].copy()
 tfidf = TfidfVectorizer(stop_words="english")
 tfidf_matrix = tfidf.fit_transform(df_sample['abstract'])
 cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
 indices = pd.Series(df_sample.index, index=df_sample['title']).drop_duplicates()
 
-# Group categories for frontend
+# ✅ Precompute mean and std similarity for hybrid scoring
+article_means = cosine_sim.mean(axis=1)
+article_stds = cosine_sim.std(axis=1)
+
+# ✅ Group categories
 category_map = defaultdict(set)
 for cat_string in df['categories'].dropna():
     for cat in cat_string.split():
@@ -45,6 +57,7 @@ for cat_string in df['categories'].dropna():
             category_map[cat].add(cat)
 
 grouped_categories = {main: sorted(list(subs)) for main, subs in category_map.items()}
+
 
 @app.route('/recommend/title', methods=['POST'])
 def recommend_by_title():
@@ -68,6 +81,7 @@ def recommend_by_title():
 
     return jsonify(results)
 
+
 @app.route('/recommend/categories', methods=['POST'])
 def recommend_by_category():
     user_topics = request.json.get("topics", [])
@@ -77,47 +91,69 @@ def recommend_by_category():
         return jsonify({"error": "No topics provided"}), 400
 
     topic_to_indices = {}
-    N_per_topic = 30  # Articles to sample per topic
+    N_per_topic = 30
 
+    # Collect indices of relevant articles for each topic
     for topic in user_topics:
-        matches = df_sample.index[df_sample['categories'].str.contains(re.escape(topic), na=False)].tolist()
+        matches = df_sample[df_sample['categories'].str.contains(re.escape(topic), na=False)].index.tolist()
         topic_to_indices[topic] = matches[:N_per_topic]
 
-    all_indices = [i for sublist in topic_to_indices.values() for i in sublist]
+    all_indices = list(set(i for indices in topic_to_indices.values() for i in indices))
     if not all_indices:
         return jsonify([])
 
+    # Prepare topic vectors to build user profile
     topic_vectors = []
-    for topic, indices_list in topic_to_indices.items():
+    for indices_list in topic_to_indices.values():
         if indices_list:
             vectors = tfidf_matrix[indices_list]
-            normalized_vectors = normalize(vectors, axis=1)
-            topic_vectors.append(normalized_vectors.toarray())
+            normalized = normalize(vectors, axis=1)
+            topic_vectors.append(normalized.toarray())
 
     if not topic_vectors:
         return jsonify([])
 
+    # Build user profile vector (average of topic vectors)
     user_profile_vector = np.vstack(topic_vectors).mean(axis=0).reshape(1, -1)
 
-    filtered_articles = df_sample.iloc[all_indices].copy()
+    # Filter articles and compute similarity with user profile
+    filtered_articles = df_sample.loc[all_indices].copy()
     filtered_tfidf = tfidf_matrix[all_indices]
-
     user_sim_scores = linear_kernel(user_profile_vector, filtered_tfidf).flatten()
-    filtered_articles['similarity_score'] = user_sim_scores
-    filtered_articles = filtered_articles.sort_values(by='similarity_score', ascending=False).head(15)
-    filtered_articles['similarity_score'] = filtered_articles['similarity_score'].round(4)
 
-    recommendations = filtered_articles[['title', 'categories', 'link', 'similarity_score']]
+    # Apply precomputed mean and std similarity
+    filtered_articles['similarity_score'] = user_sim_scores
+    filtered_articles['mean_similarity'] = filtered_articles.index.map(lambda i: article_means[i])
+    filtered_articles['std_similarity'] = filtered_articles.index.map(lambda i: article_stds[i])
+    filtered_articles['hybrid_score'] = filtered_articles['mean_similarity'] - filtered_articles['std_similarity']
+
+    # Optional: filter overly generic articles
+    filtered_articles = filtered_articles[filtered_articles['std_similarity'] >= 0.018]
+
+    # Sort by hybrid_score and return top 15
+    filtered_articles = filtered_articles.sort_values(by='hybrid_score', ascending=False).head(15)
+    filtered_articles['similarity_score'] = filtered_articles['similarity_score'].round(4)
+    filtered_articles['hybrid_score'] = filtered_articles['hybrid_score'].round(4)
+
+    # Final fields
+    recommendations = filtered_articles[[
+        'title', 'categories', 'link',
+        'similarity_score', 'mean_similarity', 'std_similarity', 'hybrid_score'
+    ]]
+
     return jsonify(recommendations.to_dict(orient="records"))
+
 
 @app.route('/categories', methods=['GET'])
 def get_categories():
     all_categories = df['categories'].dropna().str.split().explode().unique().tolist()
     return jsonify(all_categories)
 
+
 @app.route('/grouped-categories', methods=['GET'])
 def get_grouped_categories():
     return jsonify(grouped_categories)
+
 
 @app.route('/api/auth/set-interests', methods=['PUT'])
 def set_interests():
@@ -153,12 +189,18 @@ def set_interests():
         print(f"❌ Error updating interests in MongoDB: {e}")
         return jsonify({"error": "Server error"}), 500
 
+
 @app.route('/api/auth/get-interests/<user_id>', methods=['GET'])
 def get_interests(user_id):
     print(f"📤 Fetching interests for user {user_id}")
     try:
+        try:
+            user_object_id = ObjectId(user_id)
+        except InvalidId:
+            return jsonify({"error": "Invalid user ID format"}), 400
+
         user = users_collection.find_one(
-            {"_id": ObjectId(user_id)},
+            {"_id": user_object_id},
             {"interests": 1, "interestsSet": 1}
         )
 
@@ -173,6 +215,7 @@ def get_interests(user_id):
     except Exception as e:
         print(f"❌ Error fetching user interests from MongoDB: {e}")
         return jsonify({"error": "Server error"}), 500
+
 
 @app.route('/api/auth/reset-interests', methods=['POST'])
 def reset_interests():
@@ -204,6 +247,7 @@ def reset_interests():
     except Exception as e:
         print(f"❌ Error resetting interests: {e}")
         return jsonify({"error": "Server error"}), 500
+
 
 # 🚀 Start server
 if __name__ == '__main__':

@@ -98,7 +98,8 @@ class SettingsPage extends StatelessWidget {
                         String? userId = prefs.getString('userId');
 
                         final response = await http.post(
-                          Uri.parse('http://172.20.10.4:5001/api/auth/reset-interests'),
+                          //change ip address
+                          Uri.parse('http://192.168.1.43:5001/api/auth/reset-interests'),
                           headers: {
                             'Content-Type': 'application/json',
                             'Authorization': 'Bearer $token', // Optional if you're checking it

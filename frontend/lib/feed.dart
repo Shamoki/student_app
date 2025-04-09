@@ -47,7 +47,8 @@ class _FeedPageAppState extends State<FeedPageApp> {
 
     try {
       final interestRes = await http.get(
-        Uri.parse("http://192.168.100.204:5001/api/auth/get-interests/$userId"),
+        //change ip address
+        Uri.parse("http://192.168.1.43:5001/api/auth/get-interests/$userId"),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -73,7 +74,8 @@ class _FeedPageAppState extends State<FeedPageApp> {
       }
 
       final flaskRes = await http.post(
-        Uri.parse("http://192.168.100.204:5001/recommend/categories"),
+        //change ip address
+        Uri.parse("http://192.168.1.43:5001/recommend/categories"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({'topics': categories}),
       );
