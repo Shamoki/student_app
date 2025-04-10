@@ -17,7 +17,7 @@ class Flashcards extends StatefulWidget {
     super.key,
     required this.unitId,
     required this.unitName,
-    required this.topic, required String unit,
+    required this.topic,
   });
 
   @override
@@ -28,11 +28,20 @@ class _FlashcardsState extends State<Flashcards> {
   List<dynamic> flashcards = [];
   List<dynamic> filteredFlashcards = [];
   TextEditingController searchController = TextEditingController();
+  String? userRole;
 
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _fetchFlashcardsByTopic();
+  }
+
+  Future<void> _loadUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userRole = prefs.getString('role');
+    });
   }
 
   Future<void> _fetchFlashcardsByTopic() async {
@@ -68,10 +77,10 @@ class _FlashcardsState extends State<Flashcards> {
   }
 
   Future<void> _deleteFlashcard(String id) async {
+    if (userRole != "teacher") return;
+
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-
-    if (token == null) return;
 
     final response = await http.delete(
       Uri.parse('http://localhost:5000/api/flashcards/$id'),
@@ -100,6 +109,8 @@ class _FlashcardsState extends State<Flashcards> {
   }
 
   void _showFlashcardOptions() {
+    if (userRole != "teacher") return;
+
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -137,19 +148,19 @@ class _FlashcardsState extends State<Flashcards> {
                       () {
                         Navigator.pop(context);
                         Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => CustomFlashcardPage(
-      unitId: widget.unitId,
-      unitName: widget.unitName,
-    ),
-  ),
-).then((refresh) {
-  if (refresh == true) {
-    _fetchFlashcardsByTopic();
-  }
-});
-
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CustomFlashcardPage(
+                              unitId: widget.unitId,
+                              unitName: widget.unitName,
+                              topic: widget.topic,
+                            ),
+                          ),
+                        ).then((refresh) {
+                          if (refresh == true) {
+                            _fetchFlashcardsByTopic();
+                          }
+                        });
                       },
                     ),
                   ],
@@ -179,7 +190,6 @@ class _FlashcardsState extends State<Flashcards> {
       ),
     );
   }
-  
 
   @override
   Widget build(BuildContext context) {
@@ -257,29 +267,32 @@ class _FlashcardsState extends State<Flashcards> {
                               itemBuilder: (context, index) {
                                 final card = filteredFlashcards[index];
                                 return GestureDetector(
-                                  onLongPress: () {
-                                    showMenu(
-                                      context: context,
-                                      position: const RelativeRect.fromLTRB(100, 100, 100, 100),
-                                      items: [
-                                        PopupMenuItem(
-                                          child: const Text("Copy"),
-                                          onTap: () {
-                                            Clipboard.setData(ClipboardData(
-                                              text: "Q: ${card['question']}\nA: ${card['answer']}"));
-                                          },
-                                        ),
-                                        PopupMenuItem(
-                                          child: const Text("Delete"),
-                                          onTap: () {
-                                            Future.delayed(Duration.zero, () {
-                                              _deleteFlashcard(card["_id"]);
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    );
-                                  },
+                                  onLongPress: userRole == "teacher"
+                                      ? () {
+                                          showMenu(
+                                            context: context,
+                                            position: const RelativeRect.fromLTRB(100, 100, 100, 100),
+                                            items: [
+                                              PopupMenuItem(
+                                                child: const Text("Copy"),
+                                                onTap: () {
+                                                  Clipboard.setData(ClipboardData(
+                                                    text: "Q: ${card['question']}\nA: ${card['answer']}",
+                                                  ));
+                                                },
+                                              ),
+                                              PopupMenuItem(
+                                                child: const Text("Delete"),
+                                                onTap: () {
+                                                  Future.delayed(Duration.zero, () {
+                                                    _deleteFlashcard(card["_id"]);
+                                                  });
+                                                },
+                                              ),
+                                            ],
+                                          );
+                                        }
+                                      : null,
                                   child: FlipFlashcard(
                                     question: card["question"],
                                     answer: card["answer"],
@@ -294,11 +307,13 @@ class _FlashcardsState extends State<Flashcards> {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showFlashcardOptions,
-          backgroundColor: Colors.deepPurple,
-          child: const Icon(Icons.add),
-        ),
+        floatingActionButton: userRole == "teacher"
+            ? FloatingActionButton(
+                onPressed: _showFlashcardOptions,
+                backgroundColor: Colors.deepPurple,
+                child: const Icon(Icons.add),
+              )
+            : null,
       ),
     );
   }

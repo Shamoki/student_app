@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onboarding/flashcard_units.dart';
 import 'prof.dart';
-import 'assignments.dart';
+//import 'assignments.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
@@ -101,8 +101,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static Widget _buildFeatureGrid(BuildContext context) {
     final List<Map<String, dynamic>> features = [
-      {"title": "Assignments & Deadlines", "icon": Icons.assignment, "color": Colors.blue},
-      {"title": "Flashcards", "icon": Icons.book, "color": Colors.green},
+      //{"title": "Assignments & Deadlines", "icon": Icons.assignment, "color": Colors.blue},
+      {"title": "Flashcard management", "icon": Icons.book, "color": Colors.green},
      
       
     ];
@@ -133,12 +133,12 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: InkWell(
         onTap: () {
-          if (title == "Assignments & Deadlines") {
+          /*if (title == "Assignments & Deadlines") {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AssignmentsPage()),
             );
-          } else if (title == "Flashcards") {
+          } */ if (title == "Flashcard management") {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const NewFlashcardPage()),

@@ -6,8 +6,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'flashcards.dart';
 
 class TopicsPage extends StatefulWidget {
-  final String unit;
-  const TopicsPage({super.key, required this.unit});
+  final String unitId;
+  final String unitName;
+
+  const TopicsPage({
+    super.key,
+    required this.unitId,
+    required this.unitName,
+  });
 
   @override
   State<TopicsPage> createState() => _TopicsPageState();
@@ -16,11 +22,20 @@ class TopicsPage extends StatefulWidget {
 class _TopicsPageState extends State<TopicsPage> {
   List<String> topics = [];
   final TextEditingController _newTopicController = TextEditingController();
+  String? role;
 
   @override
   void initState() {
     super.initState();
+    _loadRole();
     _fetchTopics();
+  }
+
+  Future<void> _loadRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      role = prefs.getString('role');
+    });
   }
 
   Future<void> _fetchTopics() async {
@@ -29,21 +44,35 @@ class _TopicsPageState extends State<TopicsPage> {
 
     if (token == null) return;
 
-    final response = await http.get(
-      Uri.parse('http://localhost:5000/api/topics/${Uri.encodeComponent(widget.unit)}'),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      setState(() {
-        topics = List<String>.from(json.decode(response.body));
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to fetch topics")),
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:5000/api/topics/${Uri.encodeComponent(widget.unitId)}'),
+        headers: {'Authorization': 'Bearer $token'},
       );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data is List) {
+          setState(() {
+            topics = List<String>.from(data);
+          });
+        } else {
+          _showError("Unexpected response format");
+        }
+      } else {
+        _showError("Failed to fetch topics");
+      }
+    } catch (e) {
+      _showError("Error: ${e.toString()}");
+    }
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -78,18 +107,16 @@ class _TopicsPageState extends State<TopicsPage> {
                   },
                   body: jsonEncode({
                     "name": newTopic,
-                    "unit": widget.unit,
+                    "unit": widget.unitId,
                   }),
                 );
 
                 if (response.statusCode == 201) {
                   Navigator.pop(context);
                   _newTopicController.clear();
-                  _fetchTopics(); // refresh
+                  _fetchTopics(); // Refresh list
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Failed to add topic")),
-                  );
+                  _showError("Failed to add topic");
                 }
               },
               child: const Text("Add"),
@@ -105,11 +132,10 @@ class _TopicsPageState extends State<TopicsPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/background_soft.jpg'),
+                image: const AssetImage('assets/background_soft.jpg'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
                   Colors.white.withOpacity(0.9),
@@ -125,14 +151,13 @@ class _TopicsPageState extends State<TopicsPage> {
                 children: [
                   const SizedBox(height: 20),
                   Text(
-  "Topics: ${widget.unit}",
-  style: const TextStyle(
-    fontSize: 30,
-    fontWeight: FontWeight.bold,
-    color: Colors.deepPurple,
-  ),
-),
-
+                    "Topics: ${widget.unitName}",
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   Expanded(
                     child: topics.isEmpty
@@ -162,7 +187,11 @@ class _TopicsPageState extends State<TopicsPage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => Flashcards(unit: widget.unit, topic: topic, unitId: '', unitName: '',),
+                                      builder: (_) => Flashcards(
+                                        unitId: widget.unitId,
+                                        unitName: widget.unitName,
+                                        topic: topic,
+                                      ),
                                     ),
                                   );
                                 },
@@ -181,7 +210,7 @@ class _TopicsPageState extends State<TopicsPage> {
                                     ],
                                   ),
                                   child: Text(
-                                    topic,                             
+                                    topic,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
@@ -199,13 +228,15 @@ class _TopicsPageState extends State<TopicsPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: "add_topic",
-        onPressed: _showAddTopicDialog,
-        backgroundColor: Colors.deepPurple,
-        tooltip: "Add Topic",
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: role == 'teacher'
+          ? FloatingActionButton(
+              heroTag: "add_topic",
+              onPressed: _showAddTopicDialog,
+              backgroundColor: Colors.deepPurple,
+              tooltip: "Add Topic",
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

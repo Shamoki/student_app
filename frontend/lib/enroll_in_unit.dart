@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'flashcards.dart';
+import 'topics_page.dart';
 
 class EnrollInUnitPage extends StatefulWidget {
   const EnrollInUnitPage({super.key});
@@ -175,11 +175,11 @@ class _EnrollInUnitPageState extends State<EnrollInUnitPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => Flashcards(
+                                        builder: (_) => TopicsPage(
                                           unitId: unit['_id'],
                                           unitName: unit['name'],
-                                          topic: '',
-                                          unit: '',
+                                          
+                                          
                                         ),
                                       ),
                                     );

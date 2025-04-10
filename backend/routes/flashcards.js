@@ -10,9 +10,15 @@ router.get("/", async (req, res) => {
   try {
     const { unitId, topic, page = 1, limit = 20 } = req.query;
 
-    const filter = { user: req.user.userId };
+    const filter = {};
     if (unitId) filter.unit = unitId;
     if (topic) filter.topic = topic;
+
+    // 🧠 For teachers: show their own flashcards
+    if (req.user.role === 'teacher') {
+    filter.user = req.user.userId;
+  }
+
 
     const flashcards = await Flashcard.find(filter)
       .populate("unit") // Optional: fetch unit details
@@ -31,15 +37,16 @@ router.post("/", async (req, res) => {
     return res.status(403).json({ error: "Only teachers can create flashcards" });
   }
 
-  const { unitId, topic, question, answer } = req.body;
+  const { unit, topic, question, answer } = req.body;
 
-  if (!unitId || !topic || !question || !answer) {
-    return res.status(400).json({ error: "All fields are required" });
-  }
+if (!unit || !topic || !question || !answer) {
+  return res.status(400).json({ error: "All fields are required" });
+}
+
 
   try {
     const newFlashcard = new Flashcard({
-      unit: unitId,
+      unit,
       topic,
       question,
       answer,

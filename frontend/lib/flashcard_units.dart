@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
-import 'package:onboarding/flashcards.dart';
+import 'package:onboarding/topics_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NewFlashcardPage extends StatefulWidget {
@@ -29,21 +29,17 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
 
     final response = await http.get(
       Uri.parse('http://localhost:5000/api/units'),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
       setState(() {
         units = List<Map<String, dynamic>>.from(json.decode(response.body));
       });
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to fetch units")),
-        );
-      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to fetch units")),
+      );
     }
   }
 
@@ -79,21 +75,20 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                   body: jsonEncode({"name": newUnit}),
                 );
 
+                if (!mounted) return;
+
+                Navigator.of(context).pop(); // Close input dialog
+
                 if (response.statusCode == 201) {
                   final addedUnit = json.decode(response.body);
-                  if (!mounted) return;
-                  Navigator.of(context).pop(); // Close the add unit dialog
                   _newUnitController.clear();
                   setState(() {
                     units.add(addedUnit);
                   });
 
-                  await Future.delayed(const Duration(milliseconds: 100));
-
-                  if (!mounted) return;
                   showDialog(
                     context: context,
-                    builder: (context) => AlertDialog(
+                    builder: (ctx) => AlertDialog(
                       title: const Text("Unit Created"),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -114,7 +109,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                               await Clipboard.setData(
                                 ClipboardData(text: addedUnit['code'] ?? ''),
                               );
-                              if (mounted) Navigator.of(context).pop();
+                              if (ctx.mounted) Navigator.of(ctx).pop();
                             },
                             icon: const Icon(Icons.copy),
                             label: const Text("Copy Code"),
@@ -127,8 +122,6 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                     ),
                   );
                 } else {
-                  if (!mounted) return;
-                  Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Failed to add unit")),
                   );
@@ -163,12 +156,10 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
           const SnackBar(content: Text("Unit and its flashcards deleted")),
         );
       }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to delete unit")),
-        );
-      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to delete unit")),
+      );
     }
   }
 
@@ -262,11 +253,9 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) => Flashcards(
+                                              builder: (_) => TopicsPage(
                                                 unitId: unit['_id'],
                                                 unitName: unit['name'],
-                                                topic: '',
-                                                unit: '',
                                               ),
                                             ),
                                           );
@@ -282,56 +271,55 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                       ),
                                     ),
                                     PopupMenuButton<String>(
-  icon: const Icon(Icons.more_vert, color: Colors.deepPurple),
-  onSelected: (value) async {
-    if (value == 'delete') {
-      _showDeleteConfirmation(unit);
-    } else if (value == 'copy_code') {
-      await Clipboard.setData(ClipboardData(text: unit['code'] ?? ''));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Unit code copied")),
-        );
-      }
-    }
-  },
-  itemBuilder: (BuildContext context) => [
-    PopupMenuItem<String>(
-      value: 'copy_code',
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.copy, color: Colors.deepPurple),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Copy Code"),
-                const SizedBox(height: 4),
-                Text(
-                  unit['code'] ?? 'N/A',
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-    PopupMenuItem<String>(
-      value: 'delete',
-      child: Row(
-        children: const [
-          Icon(Icons.delete, color: Colors.red),
-          SizedBox(width: 8),
-          Text("Delete", style: TextStyle(color: Colors.red)),
-        ],
-      ),
-    ),
-  ],
-)
-
+                                      icon: const Icon(Icons.more_vert, color: Colors.deepPurple),
+                                      onSelected: (value) async {
+                                        if (value == 'delete') {
+                                          _showDeleteConfirmation(unit);
+                                        } else if (value == 'copy_code') {
+                                          await Clipboard.setData(ClipboardData(text: unit['code'] ?? ''));
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Unit code copied")),
+                                            );
+                                          }
+                                        }
+                                      },
+                                      itemBuilder: (BuildContext context) => [
+                                        PopupMenuItem<String>(
+                                          value: 'copy_code',
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Icon(Icons.copy, color: Colors.deepPurple),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    const Text("Copy Code"),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      unit['code'] ?? 'N/A',
+                                                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: const [
+                                              Icon(Icons.delete, color: Colors.red),
+                                              SizedBox(width: 8),
+                                              Text("Delete", style: TextStyle(color: Colors.red)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               );

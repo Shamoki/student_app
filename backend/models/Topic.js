@@ -7,17 +7,16 @@ const topicSchema = new mongoose.Schema({
     trim: true,
   },
   unit: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Unit',
     required: true,
-    trim: true,
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true, // ✅ This ensures the topic is tied to a specific user
+    required: true,
   },
-}, {
-  timestamps: true, // Optional: adds createdAt and updatedAt
-});
+}, { timestamps: true });
+
 
 module.exports = mongoose.model('Topic', topicSchema);

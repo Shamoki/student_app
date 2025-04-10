@@ -6,11 +6,13 @@ import 'dart:convert';
 class CustomFlashcardPage extends StatefulWidget {
   final String unitId;
   final String unitName;
+  final String topic; // ✅ Now passed directly
 
   const CustomFlashcardPage({
     super.key,
     required this.unitId,
     required this.unitName,
+    required this.topic,
   });
 
   @override
@@ -20,77 +22,10 @@ class CustomFlashcardPage extends StatefulWidget {
 class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
   final TextEditingController _questionController = TextEditingController();
   final TextEditingController _answerController = TextEditingController();
-  final TextEditingController _newTopicController = TextEditingController();
   bool _isLoading = false;
 
-  List<String> topics = [];
-  String? selectedTopic;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchTopics();
-  }
-
-  Future<void> _fetchTopics() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) return;
-
-    final response = await http.get(
-      Uri.parse('http://localhost:5000/api/topics/${Uri.encodeComponent(widget.unitId)}'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (response.statusCode == 200) {
-      final fetchedTopics = List<String>.from(json.decode(response.body));
-      setState(() {
-        topics = fetchedTopics;
-        if (fetchedTopics.isNotEmpty && !fetchedTopics.contains(selectedTopic)) {
-          selectedTopic = fetchedTopics.last;
-        }
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to fetch topics")),
-      );
-    }
-  }
-
-  Future<void> _addTopic(String newTopic) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) return;
-
-    final response = await http.post(
-      Uri.parse('http://localhost:5000/api/topics'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        "unit": widget.unitId,
-        "name": newTopic,
-      }),
-    );
-
-    if (response.statusCode == 201) {
-      _newTopicController.clear();
-      await _fetchTopics();
-      setState(() {
-        selectedTopic = newTopic;
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to add topic")),
-      );
-    }
-  }
-
   Future<void> _saveFlashcard() async {
-    if (_questionController.text.isEmpty || _answerController.text.isEmpty || selectedTopic == null) {
+    if (_questionController.text.isEmpty || _answerController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
       );
@@ -111,8 +46,8 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
-        "unitId": widget.unitId,
-        "topic": selectedTopic,
+        "unit": widget.unitId,
+        "topic": widget.topic, // ✅ topic directly from constructor
         "question": _questionController.text,
         "answer": _answerController.text,
       }),
@@ -130,37 +65,6 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
         const SnackBar(content: Text("Failed to add flashcard")),
       );
     }
-  }
-
-  void _showAddTopicDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add New Topic"),
-          content: TextField(
-            controller: _newTopicController,
-            decoration: const InputDecoration(hintText: "Enter topic name"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                final newTopic = _newTopicController.text.trim();
-                if (newTopic.isNotEmpty) {
-                  Navigator.pop(context);
-                  _addTopic(newTopic);
-                }
-              },
-              child: const Text("Add"),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -188,7 +92,7 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
                 children: [
                   const SizedBox(height: 10),
                   Text(
-                    "Add Flashcard to\n${widget.unitName}",
+                    "Add Flashcard to\n${widget.unitName} – ${widget.topic}",
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -196,29 +100,6 @@ class _CustomFlashcardPageState extends State<CustomFlashcardPage> {
                     ),
                   ),
                   const SizedBox(height: 30),
-                  DropdownButtonFormField<String>(
-                    value: selectedTopic,
-                    items: topics.map((topic) {
-                      return DropdownMenuItem<String>(
-                        value: topic,
-                        child: Text(topic),
-                      );
-                    }).toList(),
-                    onChanged: (newValue) => setState(() => selectedTopic = newValue),
-                    decoration: const InputDecoration(
-                      labelText: "Select Topic",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _showAddTopicDialog,
-                      child: const Text("Add New Topic", style: TextStyle(color: Colors.blue)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
                   TextField(
                     controller: _questionController,
                     decoration: const InputDecoration(
