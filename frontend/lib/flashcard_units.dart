@@ -16,11 +16,19 @@ class NewFlashcardPage extends StatefulWidget {
 class _NewFlashcardPageState extends State<NewFlashcardPage> {
   List<Map<String, dynamic>> units = [];
   final TextEditingController _newUnitController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _fetchUnits();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _newUnitController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchUnits() async {
@@ -46,7 +54,7 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
   void _showAddUnitDialog() {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text("Add New Unit"),
           content: TextField(
@@ -55,13 +63,15 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () async {
                 final newUnit = _newUnitController.text.trim();
                 if (newUnit.isEmpty) return;
+
+                Navigator.of(dialogContext).pop(); // Close input dialog
 
                 final prefs = await SharedPreferences.getInstance();
                 final token = prefs.getString('token');
@@ -77,8 +87,6 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
 
                 if (!mounted) return;
 
-                Navigator.of(context).pop(); // Close input dialog
-
                 if (response.statusCode == 201) {
                   final addedUnit = json.decode(response.body);
                   _newUnitController.clear();
@@ -86,6 +94,14 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                     units.add(addedUnit);
                   });
 
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  _scrollController.animateTo(
+                    _scrollController.position.maxScrollExtent + 200,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOut,
+                  );
+
+                  if (!mounted) return;
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -218,20 +234,26 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                   const SizedBox(height: 20),
                   Expanded(
                     child: units.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Lottie.asset('assets/animations/motivation.json', height: 200),
-                                const SizedBox(height: 20),
-                                const Text(
-                                  "You have no flashcards yet",
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                        ? ListView(
+                            controller: _scrollController,
+                            children: [
+                              Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Lottie.asset('assets/animations/motivation.json', height: 200),
+                                    const SizedBox(height: 20),
+                                    const Text(
+                                      "You have no flashcards yet",
+                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           )
                         : ListView.builder(
+                            controller: _scrollController,
                             itemCount: units.length,
                             itemBuilder: (context, index) {
                               final unit = units[index];
@@ -288,7 +310,6 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                         PopupMenuItem<String>(
                                           value: 'copy_code',
                                           child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               const Icon(Icons.copy, color: Colors.deepPurple),
                                               const SizedBox(width: 8),

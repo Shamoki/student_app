@@ -13,6 +13,7 @@ class EnrollInUnitPage extends StatefulWidget {
 }
 
 class _EnrollInUnitPageState extends State<EnrollInUnitPage> {
+  final ScrollController _scrollController = ScrollController();
   final TextEditingController _codeController = TextEditingController();
   bool isLoading = false;
   List<Map<String, dynamic>> enrolledUnits = [];
@@ -21,6 +22,13 @@ class _EnrollInUnitPageState extends State<EnrollInUnitPage> {
   void initState() {
     super.initState();
     _fetchEnrolledUnits();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _codeController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchEnrolledUnits() async {
@@ -109,6 +117,12 @@ class _EnrollInUnitPageState extends State<EnrollInUnitPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Successfully joined ${unit['name']}")),
         );
+        // Scroll to the top of the list
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOut,
+        );
       }
     } else {
       final error = json.decode(response.body)['error'] ?? 'Enrollment failed';
@@ -151,6 +165,7 @@ class _EnrollInUnitPageState extends State<EnrollInUnitPage> {
                       onRefresh: _fetchEnrolledUnits,
                       child: enrolledUnits.isEmpty
                           ? ListView(
+                              controller: _scrollController,
                               children: [
                                 Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -167,6 +182,7 @@ class _EnrollInUnitPageState extends State<EnrollInUnitPage> {
                               ],
                             )
                           : ListView.builder(
+                              controller: _scrollController,
                               itemCount: enrolledUnits.length,
                               itemBuilder: (context, index) {
                                 final unit = enrolledUnits[index];
@@ -178,8 +194,6 @@ class _EnrollInUnitPageState extends State<EnrollInUnitPage> {
                                         builder: (_) => TopicsPage(
                                           unitId: unit['_id'],
                                           unitName: unit['name'],
-                                          
-                                          
                                         ),
                                       ),
                                     );
