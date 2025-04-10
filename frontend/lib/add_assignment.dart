@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_web_auth/flutter_web_auth.dart'; // For Google OAuth
+// For Google OAuth
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AddAssignmentPage extends StatefulWidget {
@@ -16,8 +16,8 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   DateTime? _selectedDueDate;
-  List<Map<String, dynamic>> _classroomAssignments = [];
-  bool _isLoading = false;
+  final List<Map<String, dynamic>> _classroomAssignments = [];
+  final bool _isLoading = false;
 
   Future<void> _pickDueDate() async {
     DateTime? pickedDate = await showDatePicker(
@@ -74,67 +74,7 @@ class _AddAssignmentPageState extends State<AddAssignmentPage> {
     }
   }
 
-  Future<void> _authenticateWithGoogle() async {
-    const clientId = 'YOUR_GOOGLE_CLIENT_ID';
-    const redirectUri = 'com.your.app://callback';
-    const scope =
-        'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me';
 
-    final url = Uri.https('accounts.google.com', '/o/oauth2/v2/auth', {
-      'response_type': 'code',
-      'client_id': clientId,
-      'redirect_uri': redirectUri,
-      'scope': scope,
-    });
-
-    try {
-      final result = await FlutterWebAuth.authenticate(
-        url: url.toString(),
-        callbackUrlScheme: 'com.your.app',
-      );
-      final code = Uri.parse(result).queryParameters['code'];
-      if (code != null) {
-        await _fetchGoogleClassroomAssignments(code);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to authenticate: $e")),
-      );
-    }
-  }
-
-  Future<void> _fetchGoogleClassroomAssignments(String code) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final response = await http.post(
-        Uri.parse('http://localhost:5000/api/google-classroom/assignments'),
-        headers: {"Content-Type": "application/json"},
-        body: json.encode({"code": code}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          _classroomAssignments = List<Map<String, dynamic>>.from(data);
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to fetch assignments")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
 
   void _selectAssignment(Map<String, dynamic> assignment) {
     setState(() {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
@@ -38,9 +39,11 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
         units = List<Map<String, dynamic>>.from(json.decode(response.body));
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to fetch units")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to fetch units")),
+        );
+      }
     }
   }
 
@@ -56,13 +59,14 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () async {
-                if (_newUnitController.text.trim().isEmpty) return;
                 final newUnit = _newUnitController.text.trim();
+                if (newUnit.isEmpty) return;
+
                 final prefs = await SharedPreferences.getInstance();
                 final token = prefs.getString('token');
 
@@ -77,43 +81,60 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
 
                 if (response.statusCode == 201) {
                   final addedUnit = json.decode(response.body);
+                  if (!mounted) return;
+                  Navigator.of(context).pop(); // Close the add unit dialog
+                  _newUnitController.clear();
                   setState(() {
                     units.add(addedUnit);
                   });
-                  Navigator.pop(context);
-                  _newUnitController.clear();
+
+                  await Future.delayed(const Duration(milliseconds: 100));
+
+                  if (!mounted) return;
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Unit Created"),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text("Share this class code with students:"),
+                          const SizedBox(height: 10),
+                          SelectableText(
+                            addedUnit['code'] ?? 'N/A',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: Colors.deepPurple,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: addedUnit['code'] ?? ''),
+                              );
+                              if (mounted) Navigator.of(context).pop();
+                            },
+                            icon: const Icon(Icons.copy),
+                            label: const Text("Copy Code"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurple,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 } else {
+                  if (!mounted) return;
+                  Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Failed to add unit")),
                   );
                 }
               },
               child: const Text("Add"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showDeleteConfirmation(Map<String, dynamic> unit) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Delete Unit and Flashcards"),
-          content: Text("Are you sure you want to delete \"${unit['name']}\" and all its flashcards?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _deleteUnit(unit['_id']);
-              },
-              child: const Text("Delete", style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -137,14 +158,43 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
       setState(() {
         units.removeWhere((u) => u['_id'] == unitId);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Unit and its flashcards deleted")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Unit and its flashcards deleted")),
+        );
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to delete unit")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to delete unit")),
+        );
+      }
     }
+  }
+
+  void _showDeleteConfirmation(Map<String, dynamic> unit) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Delete Unit and Flashcards"),
+          content: Text("Are you sure you want to delete \"${unit['name']}\" and all its flashcards?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deleteUnit(unit['_id']);
+              },
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -205,23 +255,22 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                   ],
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: GestureDetector(
                                         onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => Flashcards(
-        unitId: unit['_id'],
-        unitName: unit['name'],
-        topic: '', unit: '',
-      ),
-    ),
-  );
-},
-
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => Flashcards(
+                                                unitId: unit['_id'],
+                                                unitName: unit['name'],
+                                                topic: '',
+                                                unit: '',
+                                              ),
+                                            ),
+                                          );
+                                        },
                                         child: Text(
                                           unit['name'],
                                           style: const TextStyle(
@@ -233,25 +282,56 @@ class _NewFlashcardPageState extends State<NewFlashcardPage> {
                                       ),
                                     ),
                                     PopupMenuButton<String>(
-                                      icon: const Icon(Icons.more_vert, color: Colors.deepPurple),
-                                      onSelected: (value) {
-                                        if (value == 'delete') {
-                                          _showDeleteConfirmation(unit);
-                                        }
-                                      },
-                                      itemBuilder: (BuildContext context) => [
-                                        PopupMenuItem<String>(
-                                          value: 'delete',
-                                          child: Row(
-                                            children: const [
-                                              Icon(Icons.delete, color: Colors.red),
-                                              SizedBox(width: 8),
-                                              Text("Delete", style: TextStyle(color: Colors.red)),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+  icon: const Icon(Icons.more_vert, color: Colors.deepPurple),
+  onSelected: (value) async {
+    if (value == 'delete') {
+      _showDeleteConfirmation(unit);
+    } else if (value == 'copy_code') {
+      await Clipboard.setData(ClipboardData(text: unit['code'] ?? ''));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Unit code copied")),
+        );
+      }
+    }
+  },
+  itemBuilder: (BuildContext context) => [
+    PopupMenuItem<String>(
+      value: 'copy_code',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.copy, color: Colors.deepPurple),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Copy Code"),
+                const SizedBox(height: 4),
+                Text(
+                  unit['code'] ?? 'N/A',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'delete',
+      child: Row(
+        children: const [
+          Icon(Icons.delete, color: Colors.red),
+          SizedBox(width: 8),
+          Text("Delete", style: TextStyle(color: Colors.red)),
+        ],
+      ),
+    ),
+  ],
+)
+
                                   ],
                                 ),
                               );

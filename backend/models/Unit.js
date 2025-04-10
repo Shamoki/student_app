@@ -5,13 +5,24 @@ const UnitSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  user: {  // ✅ Associate unit with a specific user
+  code: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  teacher: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
+  students: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
 });
 
-UnitSchema.index({ name: 1, user: 1 }, { unique: true }); // ✅ Prevent duplicate units per user
+UnitSchema.index({ name: 1, teacher: 1 }, { unique: true });
 
 module.exports = mongoose.model("Unit", UnitSchema);

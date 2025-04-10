@@ -15,7 +15,7 @@ class TeacherHomePage extends StatefulWidget {
 }
  
 class _TeacherHomePageState extends State<TeacherHomePage> {
-  int _selectedIndex = 0;
+  final int _selectedIndex = 0;
 
   final List<Widget> _pages = [
     const HomeScreen(),

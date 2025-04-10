@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:onboarding/feed.dart';
-//import 'package:onboarding/flashcards.dart';
+import 'package:onboarding/enroll_in_unit.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 import 'prof.dart';
 import 'assignments.dart';
@@ -207,12 +207,12 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(builder: (context) => const AssignmentsPage()),
             );
-          } //else if (title == "Flashcards") {
-            //Navigator.push(
-              //context,
-              //MaterialPageRoute(builder: (context) => const Flashcards()),
-           // );
-          //}
+          } else if (title == "Flashcards") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const EnrollInUnitPage()),
+           );
+          }
           else if (title == "Online class links") {
             Navigator.push(
               context,
