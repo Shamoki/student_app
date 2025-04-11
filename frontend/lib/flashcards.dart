@@ -133,6 +133,84 @@ class _FlashcardsState extends State<Flashcards> {
     });
   }
 
+<<<<<<< HEAD
+=======
+  void _showFlashcardOptions() {
+    if (userRole != "teacher") return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: 250,
+          child: Column(
+            children: [
+              const Text(
+                "Choose Flashcard Type",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.2,
+                  children: [
+                    
+                    _buildFeatureCard(
+                      "Custom Flashcard",
+                      Icons.create,
+                      Colors.green,
+                      () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CustomFlashcardPage(
+                              unitId: widget.unitId,
+                              unitName: widget.unitName,
+                              topic: widget.topic,
+                            ),
+                          ),
+                        ).then((refresh) {
+                          if (refresh == true) {
+                            _fetchFlashcardsByTopic();
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFeatureCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 40, color: color),
+            const SizedBox(height: 10),
+            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+>>>>>>> b32167dc5451f4d708914199e00bf71f6bdfeba0
   @override
   Widget build(BuildContext context) {
     return Scaffold(
