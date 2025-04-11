@@ -82,4 +82,33 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// ✅ Update a specific flashcard (teachers only)
+router.put("/:id", async (req, res) => {
+  if (req.user.role !== "teacher") {
+    return res.status(403).json({ error: "Only teachers can update flashcards" });
+  }
+
+  const { question, answer } = req.body;
+
+  if (!question || !answer) {
+    return res.status(400).json({ error: "Both question and answer are required" });
+  }
+
+  try {
+    const updatedFlashcard = await Flashcard.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.userId },
+      { question, answer },
+      { new: true } // return the updated document
+    );
+
+    if (!updatedFlashcard) {
+      return res.status(404).json({ error: "Flashcard not found or not yours" });
+    }
+
+    res.json(updatedFlashcard);
+  } catch (err) {
+    res.status(500).json({ error: "Error updating flashcard" });
+  }
+});
+
 module.exports = router;

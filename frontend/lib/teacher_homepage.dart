@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Align(
               alignment: Alignment.bottomCenter,
               child: Text(
-                "Welcome,Teacher $username 👋",
+                "Welcome,Tr. $username 👋",
                 style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.deepPurple),
               ),
             ),
