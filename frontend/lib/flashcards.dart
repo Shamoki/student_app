@@ -132,15 +132,7 @@ class _FlashcardsState extends State<Flashcards> {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.2,
                   children: [
-                    _buildFeatureCard(
-                      "Auto-Generate",
-                      Icons.auto_awesome,
-                      Colors.blue,
-                      () {
-                        Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AutoFlashcardPage()));
-                      },
-                    ),
+                    
                     _buildFeatureCard(
                       "Custom Flashcard",
                       Icons.create,

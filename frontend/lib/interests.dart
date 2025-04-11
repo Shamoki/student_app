@@ -196,7 +196,7 @@ class _InterestsPageState extends State<InterestsPage> {
   Future<void> fetchGroupedCategories() async {
     try {
       //change ip address
-      final response = await http.get(Uri.parse("http://192.168.1.43:5001/grouped-categories"));
+      final response = await http.get(Uri.parse("http://192.168.1.44:5001/grouped-categories"));
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         setState(() {
@@ -248,7 +248,7 @@ class _InterestsPageState extends State<InterestsPage> {
 
     final response = await http.put(
       //change ip address
-      Uri.parse("http://192.168.1.43:5001/api/auth/set-interests"),
+      Uri.parse("http://192.168.1.44:5001/api/auth/set-interests"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
